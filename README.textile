@@ -1,14 +1,14 @@
-h2. pyPerry
+h1. pyPerry
 
-h3. Description
+h2. Description
 
 Python library for querying and mapping data through generic interfaces (this is a port of the Ruby 'perry' library)
 
-h3. Usage
+h2. Usage
 
-    import pyperry
+bc. import pyperry
 
-h3. License
+h2. License
 
 Copyright (c) 2011 Travis Petticrew
 
