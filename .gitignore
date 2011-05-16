@@ -1,4 +1,5 @@
 build/
 dist/
 pyperry.egg-info/
+*.pyc
 
