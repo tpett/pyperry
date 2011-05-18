@@ -5,9 +5,9 @@ class BERTRPC(AbstractAdapter):
     """
     Adapter for accesing data over BERTRPC
     Takes these configuration keywords:
-        * base_options: options that will be included with every request
-        * namespace: the module that the call lives in
-        * procedure: the remote procedure to call
+        - base_options: options that will be included with every request
+        - namespace: the module that the call lives in
+        - procedure: the remote procedure to call
     """
 
     def read(self, **kwargs):

@@ -8,13 +8,24 @@ from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry.association import BelongsTo, HasMany, HasOne
 
 class BaseMeta(type):
-    """The Metaclass for Base"""
+    """
+    The Metaclass for Base
+
+    This allows for tracking all models defined using perry.Base as well as
+    dynamic class level methods.  Class methods are delegated to an instance of
+    L{pyperry.relation.Relation} if it knows how to handle them.
+
+    """
 
     defined_models = {}
 
     def __new__(mcs, name, bases, dict_):
         """
         Called any time a new Base class is created using this metaclass
+
+        Models names are tracked in order to allow quick lookup of the model's
+        class by its name.
+
         """
 
         # Interpret _config as __configmodel__ effectively obfiscating it
@@ -54,7 +65,7 @@ class BaseMeta(type):
         return new
 
     def __getattr__(cls, key):
-        """Allow delegation to Relation"""
+        """Allow delegation to Relation or raise AttributeError"""
         relation_delegation = (
                 Relation.singular_query_methods +
                 Relation.plural_query_methods +
@@ -65,6 +76,26 @@ class BaseMeta(type):
             raise AttributeError("Undefined attribute '%s'" % key)
 
     def resolve_name(cls, name):
+        """
+        Lookup class by the given name
+
+        Returns all models that match the given name.  To avoid ambiguous
+        matches you can pass any section of the preceding namespace or a full
+        absolute path name to the class. For example, to find the class
+        foo.bar.Baz you could specify::
+
+            # Matches all models named 'Baz'
+            Base.resolve_name('Baz')
+            # Matches all models named 'Baz' in a 'bar' namespace
+            Base.resolve_name('bar.Baz')
+            # Or specify absolutely
+            Base.resolve_name('foo.bar.Baz')
+
+        @param name: string representation of a class with or without the
+        partial or full namespace in dot notation
+        @return: a list of classes matching C{name}
+
+        """
         name = name.rsplit('.', 1)
         class_name = name[-1]
         if len(name) == 2:
@@ -85,12 +116,24 @@ class BaseMeta(type):
             return []
 
 class Base(object):
-    """The Base class for all models using the pyperry"""
+    """
+    The Base class for all models using pyperry
+    """
 
     __metaclass__ = BaseMeta
 
     def __init__(self, attributes, new_record=True):
-        """Initialize a new pyperry object with attributes"""
+        """
+        Initialize a new pyperry object with attributes
+
+        Uses C{attributes} dictionary to set attributes on a new instance.
+        Only keys that have been defined for the model will be set.  Defaults
+        to a new record but can be overriden with C{new_record} param
+
+        @param attributes: dictionary of attributes to set on the new instance
+        @param new_record: set new_record flag to C{True} or C{False}.
+
+        """
         self.attributes = {}
         self.set_attributes(attributes)
         self.new_record = new_record
@@ -110,6 +153,7 @@ class Base(object):
     # will be called automatically.  The [_key_] method of accessing should
     # never be shadowed
     #
+    #{ Attribute access
     def __getitem__(self, key):
         if key in self.defined_attributes:
             # Using get() here to avoid KeyError on uninitialized attrs
@@ -141,30 +185,50 @@ class Base(object):
             self[key] = value
         else:
             object.__setattr__(self, key, value)
+    #}
 
-
+    #{ Persistence
     def set_attributes(self, attributes):
         """
-        Set the attributes of the object using the provided dictionary.  Only
-        attributes defined using define_attributes will be set.
+        Set the attributes of the object using the provided dictionary.
+
+        Only attributes defined using define_attributes will be set.
+
+        @param attributes: dictionary of attributes
         """
         for field in attributes.keys():
             if field in self.defined_attributes:
                 self[field] = attributes[field]
 
     def save(self):
-        """Save the current state of the model through the write adapter"""
+        """
+        Save the current state of the model through the write adapter
+
+        @return: Returns C{True} on success or C{False} on failure
+        """
         return self.adapter('write')(model=self)
 
-    def update_attributes(self, attrs=None, **kwargs):
+    def update_attributes(self, attributes=None, **kwargs):
         """
         Update the attributes with the given dictionary or keywords and save
         the model.
-        """
-        if not attrs:
-            attrs = kwargs
 
-        self.set_attributes(attrs)
+        Has the same effect as calling::
+            obj.set_attributes(attributes)
+            obj.save()
+
+        Requires either C{attributes} or keyword arguments.  If both are
+        provicded, C{attributes} will be used and C{kwargs} will be ignored.
+
+        @param attributes: dictionary of attributes to set
+        @param kwargs: Optionally use keyword syntax instead of C{attributes}
+        @return: Returns C{True} on success or C{False} on failure
+
+        """
+        if not attributes:
+            attributes = kwargs
+
+        self.set_attributes(attributes)
 
         return self.save()
 
@@ -175,21 +239,27 @@ class Base(object):
         """
         return self.adapter('write')(model=self, delete=True)
     delete = destroy
+    #}
 
+    #{ Configuration
     @classmethod
-    def configure(cls, adapter_type, *args, **kwargs):
+    def configure(cls, adapter_type, config=None, **kwargs):
         """
-        Method for generically setting adapter configuration options.  Accepts a
-        dictionary argument or keyword arguments, but not both.
+        Method for setting adapter configuration options.
+
+        Accepts a dictionary argument or keyword arguments, but not both.
+        Configuration specified will be merged with all previous calls to
+        C{configure} for this C{adapter_type}
+
+        @param adapter_type: specify the type of adapter ('read' or 'write')
+        @param config: dictionary of configuration parameters
+        @param kwargs: alternate specification of configuration
         """
         if adapter_type not in AbstractAdapter.adapter_types:
             raise errors.ConfigurationError(
                     "Unrecognized adapter type: %s" % adapter_type)
 
-        if len(args) == 1 and args[0].__class__ is dict:
-            new_dict = args[0]
-        else:
-            new_dict = kwargs
+        new_dict = config or kwargs
 
         if not cls.adapter_config.has_key(adapter_type):
             cls.adapter_config[adapter_type] = {}
@@ -198,6 +268,20 @@ class Base(object):
 
     @classmethod
     def add_middleware(cls, adapter_type, klass, options=None, **kwargs):
+        """
+        Add a middleware to the given adapter
+
+        Interface for appending a middleware to an adapter stack.  For more
+        information on middlewares see docs on
+        L{pyperry.adapter.abstract_adapter.AbstractAdapter}.
+
+        @param adapter_type: specify type of adapter ('read' or 'write')
+        @param klass: specify the class to use as the middleware
+        @param options: specify an options dictionary to pass to middleware
+        @param kwargs: specify options with keyword arguments instead of
+        options.
+
+        """
         if cls.adapter_config.has_key(adapter_type):
             middlewares = cls.adapter_config[adapter_type].get('_middlewares')
         if not 'middlewares' in locals() or not middlewares:
@@ -208,13 +292,16 @@ class Base(object):
         cls.configure(adapter_type, _middlewares=middlewares)
 
     @classmethod
-    def configure_read(cls, *args, **kwargs):
-        """Alias to configure('read', ...)"""
-        cls.configure('read', *args, **kwargs)
-
-    @classmethod
     def adapter(cls, adapter_type):
-        """Returns the adapter specified by type"""
+        """
+        Returns the adapter specified by C{adapter_type}
+
+        If the adapter has not been configured correctly C{ConfigurationError}
+        will be raised.
+
+        @param adapter_type: type of adapter ('read' or 'write')
+        @return: the adapter specified by C{adapter_type}
+        """
         if cls._adapters.has_key(adapter_type):
             return cls._adapters[adapter_type]
 
@@ -233,41 +320,48 @@ class Base(object):
         return cls._adapters[adapter_type]
 
     @classmethod
-    def read_adapter(cls):
+    def define_attributes(cls, *attributes):
         """
-        Returns the read adapter for this model.
-        """
-        return cls.adapter('read')
+        Define available attributes for a model.
 
-    @classmethod
-    def define_attributes(cls, *attrs):
+        This method is automatically called when the attributes var is set on
+        the class during definition.  Each call will union any new attributes
+        into the set of defined attributes.
+
+        aliased as C{attributes}
+
+        @param attributes: list parameters as strings, or the first argument is
+        a list of strings.
         """
-        Define available attributes for a model.  This method is automatically
-        called when the attributes var is set on the class during definition.
-        Each call will union any new attributes into the set of defined
-        attributes.
-        """
-        if attrs[0].__class__ in [list, set, tuple]:
-            attrs = attrs[0]
-        cls.defined_attributes |= set(attrs)
+        if attributes[0].__class__ in [list, set, tuple]:
+            attributes = attributes[0]
+        cls.defined_attributes |= set(attributes)
     attributes = define_attributes
+    #}
 
     @classmethod
     def fetch_records(cls, relation):
         """
-        Actually makes the call to the adapter to pull records from the data
-        source.  This method returns an array of objects.  None results are
-        ignored.
+        Execute query using relation on the read adapter stack
+
+        @param relation: An instance of C{Relation} describing the query
+        @return: list of records from adapter query data each with new_record
+        set to false.  C{None} items are removed.
+
         """
         return [ cls(item, False) for item in
-                cls.read_adapter()(relation=relation) if item ]
+                cls.adapter('read', )(relation=relation) if item ]
 
-    # Scoping methods
+    #{ Scoping
     @classmethod
     def relation(cls):
         """
-        A base instance of `Relation` for this model.  All query scopes
-        originate from this instance.
+        A base instance of C{Relation} for this model.
+
+        All query scopes originate from this instance, and should not change
+        this instance.
+
+        @return: C{Relation} instance for this model
         """
         if not hasattr(cls, '_relation'): cls._relation = Relation(cls)
         return cls._relation
@@ -275,9 +369,14 @@ class Base(object):
     @classmethod
     def current_scope(cls):
         """
+        Base instance of C{Relation} after default scopes are applied.
+
         Returns an instance of Relation after applying the latest scope in
-        the class variable _scoped_methods.  Practically, this applies any
-        scopes defined in default_scope calls.
+        the class variable _scoped_methods.
+
+        @return: C{Relation} instance with default scopes applied if default
+        scopes are present.  Otherwise returns C{None}.
+
         """
         if not hasattr(cls, '_scoped_methods'): cls._scoped_methods = []
         if len(cls._scoped_methods) > 0:
@@ -286,9 +385,13 @@ class Base(object):
     @classmethod
     def scoped(cls):
         """
-        Returns either the `current_scope` value or `relation` depending on
-        whether or not `current_scope` exists.  If you want an instance of
-        relation on this model you most likely want this method.
+        Unique instance of C{Relation} to build queries on.
+
+        If you want an instance of relation on this model you most likely want
+        this method.
+
+        @return: Cloned return value from C{current_scope} or C{relation}
+
         """
         if cls.current_scope():
             return cls.relation().merge(cls.current_scope())
@@ -298,12 +401,22 @@ class Base(object):
     @classmethod
     def default_scope(cls, *args, **kwargs):
         """
-        Setup a default scoping of this model.  You can pass a dictionary of
-        finder_options or a relation.  Those query values will be merged into
-        all queries on this model.
+        Add a default scoping for this model.
 
-        Note:  All calls to default_scope aggregate, so each call will append
-        to the default query options
+        All queries will be built based on the default scope of this model.
+        Only specify a default scope if you I{always} want the scope
+        applied.  Calls to C{default_scope} aggregate.  So each call will append
+        to options from previous calls.
+
+        Note: You can bypass default scopings using the L{unscoped} method.
+
+        Similar to arguments accepted by L{scope}.  The only thing not
+        supported is lambdas/functions accepting additional arguments. Here are
+        some examples::
+
+            Model.default_scope(where={'type': 'Foo'})
+            Model.default_scope({ 'order': 'name DESC' })
+
         """
         options = cls._parse_scope_options(*args, **kwargs)
         base_scope = cls.current_scope() or cls.relation()
@@ -313,29 +426,36 @@ class Base(object):
             cls._scoped_methods.append(rel)
 
     @classmethod
-    def unscoped(cls, func):
+    def unscoped(cls, function):
         """
-        All default scoping will be removed and the passed function/lambda will
-        be evaluated.  After its execution all previous scopes will be
-        reapplied.
+        Execute C{function} without default scopes
+
+        All default scoping is temporarily removed and the given function is
+        then executed.  After the function is executed all previous default
+        scopes are applied.
+
+        @param function: function to execute
+
         """
         cls.current_scope() # Ensure _scoped_methods set
         current_scopes = cls._scoped_methods
         try:
             cls._scoped_methods = []
-            func()
+            function()
         finally:
             cls._scoped_methods = current_scopes
 
     @classmethod
     def define_scope(cls, name_or_func, *args, **kwargs):
-        """Defines a scope on the given model.
+        """
+        Defines a scope on the given model.
+
         A scope can be defined in one of several ways:
 
         Dictionary or Keyword Arguments
 
         If your scope is simply setting a few static query arguments than this
-        is the easiest option.  Here are a few examples:
+        is the easiest option.  Here are a few examples::
 
             # With a dictionary
             Model.scope('ordered', { 'order': "name" })
@@ -348,7 +468,7 @@ class Base(object):
 
         When your scope involves chaining other scopes, delayed values (such as
         a relative time), or if it takes arguments then this is the preferred
-        method.  Here are a few examples:
+        method.  Here are a few examples::
 
             Model.scope('awesome_ordered', lambda(cls): cls.ordered().awesome())
 
@@ -364,7 +484,7 @@ class Base(object):
             def name_like(cls, word):
                 return cls.where(["name LIKE '%?%", word])
 
-        These scopes can be chained. Like so:
+        These scopes can be chained. Like so::
 
             # Returns a max of 5 records that have a name containing 'bob'
             # ordered
@@ -403,7 +523,9 @@ class Base(object):
 
         return scope
     scope = define_scope
+    #}
 
+    #{ Association Declaration
     @classmethod
     def belongs_to(cls, id, **kwargs):
         cls._create_external_association(BelongsTo(cls, id, **kwargs))
@@ -415,6 +537,7 @@ class Base(object):
     @classmethod
     def has_one(cls, id, **kwargs):
         cls._create_external_association(HasOne(cls, id, **kwargs))
+    #}
 
     @classmethod
     def _create_external_association(cls, association):

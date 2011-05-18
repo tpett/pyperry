@@ -150,18 +150,18 @@ class AdapterConfigurationTestCase(BaseTestCase):
         """setting read config should merge all dicts up the inheritance tree"""
         class TestBase(pyperry.Base):
             def _config(cls):
-                cls.configure_read(poop='smells')
+                cls.configure('read', poop='smells')
 
         class Test(TestBase):
             def _config(cls):
-                cls.configure_read(foo='bar')
+                cls.configure('read', foo='bar')
 
         self.assertEqual(Test.adapter_config['read']['foo'], 'bar')
         self.assertEqual(Test.adapter_config['read']['poop'], 'smells')
 
         class Test2(Test):
             def _config(cls):
-                cls.configure_read({ 'poop': 'stanks' })
+                cls.configure('read', { 'poop': 'stanks' })
 
         self.assertEqual(Test2.adapter_config['read']['poop'], 'stanks')
         self.assertEqual(Test.adapter_config['read']['poop'], 'smells')
@@ -172,18 +172,18 @@ class AdapterConfigurationTestCase(BaseTestCase):
         from pyperry import errors
         class Test(pyperry.Base):
             def _config(cls):
-                cls.configure_read(poop='smells')
+                cls.configure('read', poop='smells')
 
-        self.assertRaises(errors.ConfigurationError, Test.read_adapter)
+        self.assertRaises(errors.ConfigurationError, Test.adapter, 'read')
 
     def test_delayed_exec_configs(self):
         """should delay calling any lambda config values until they are needed"""
         from fixtures.test_adapter import TestAdapter
         class Test(pyperry.Base):
             def _config(cls):
-                cls.configure_read(adapter=TestAdapter, foo=lambda: 'barbarbar')
+                cls.configure('read', adapter=TestAdapter, foo=lambda: 'barbarbar')
 
-        adapter = Test.read_adapter()
+        adapter = Test.adapter('read', )
         self.assertEquals(adapter.config.foo, 'barbarbar')
 
     def test_unique_adapters(self):
@@ -335,7 +335,7 @@ class BaseScopingTestCase(BaseTestCase):
     def setUp(self):
         class Test(pyperry.Base):
             attributes = ['id']
-        Test.configure_read(adapter=TestAdapter)
+        Test.configure('read', adapter=TestAdapter)
 
         self.Test = Test
         TestAdapter.data = { 'id': 1 }

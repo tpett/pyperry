@@ -11,7 +11,7 @@ class Target(pyperry.Base):
 
 class AssocTest(pyperry.Base):
     def _config(c):
-        c.configure_read(adapter=TestAdapter)
+        c.configure('read', adapter=TestAdapter)
 
 class Site(AssocTest):
     def _config(c):

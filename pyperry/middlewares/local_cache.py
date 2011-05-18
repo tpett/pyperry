@@ -43,14 +43,14 @@ class LocalCache(object):
     the query used.
 
     Config options:
-    - interval: The interval in seconds that a given cache entry will be
-      considered fresh
-    - max_entry_size: Max len of results that will be cached.  If set only
-      results less than this value will be stored in the cache.  All others
-      will be refetched every time.
+        - interval: The interval in seconds that a given cache entry will be
+          considered fresh
+        - max_entry_size: Max len of results that will be cached.  If set only
+          results less than this value will be stored in the cache.  All others
+          will be refetched every time.
 
     Importing this module adds the fresh query option to Relation.  This allows
-    the developer to easily force a query to be fresh.
+    the developer to easily force a query to be fresh::
 
         # This query will always fetch fresh data
         Person.where({ 'name': 'bob' }).fresh()
