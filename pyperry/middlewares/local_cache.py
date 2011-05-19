@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import hashlib
 
-from pyperry import Relation
+from pyperry.relation import Relation
 
 class CacheStore(object):
 
