@@ -183,6 +183,8 @@ class Base(object):
         self.attributes = {}
         self.set_attributes(attributes)
         self.new_record = new_record
+        self.saved = None
+        self.errors = {}
 
     #{ Attribute access
     def __getitem__(self, key):
@@ -342,6 +344,9 @@ class Base(object):
         return self.adapter('write')(model=self, delete=True)
     delete = destroy
     #}
+
+    def reload(self):
+        self.attributes = self.scoped().where({'id': 1}).first().attributes
 
     #{ Configuration
     @classmethod

@@ -1,5 +1,7 @@
 import tests
 import unittest
+import copy
+
 import pyperry
 from pyperry import errors
 
@@ -69,6 +71,16 @@ class InitializeTestCase(BaseTestCase):
         """init should take 2nd paramter to set new_record field"""
         t = self.Test({'id': 1}, False)
         self.assertEqual(t.new_record, False)
+
+    def test_init_sets_saved_none(self):
+        """init should set saved to None by default"""
+        t = self.Test({})
+        self.assertEqual(t.saved, None)
+
+    def test_init_errors(self):
+        """init should set the errors attribute to any empty dict"""
+        t = self.Test({})
+        self.assertEqual(t.errors, {})
 
 
 ##
@@ -689,6 +701,33 @@ class BaseDestroyMethodTestCase(BasePersistenceTestCase):
     def test_alias(self):
         """should be aliased as delete"""
         self.assertEqual(self.test.delete, self.test.destroy)
+
+
+##
+# reload method
+#
+
+class ReloadTest(pyperry.Base):
+    def _config(cls):
+        cls.attributes('id', 'a', 'b')
+
+
+class BaseDestroyMethodTestCase(BasePersistenceTestCase):
+
+    def _fake_fetch_records(cls, relation):
+        return [ReloadTest({ 'id': 2, 'a': 3, 'b': 4 })]
+
+    def setUp(self):
+        super(self.__class__, self).setUp()
+        ReloadTest.fetch_records = self._fake_fetch_records
+
+    def test_reload(self):
+        before = { 'id': '1' }
+        test = ReloadTest(copy.copy(before))
+        test.reload()
+        self.assertNotEqual(test.attributes, before)
+        self.assertEqual(test.attributes, { 'id': 2, 'a': 3, 'b': 4 })
+        self.assertEqual(test.a, 3)
 
 
 ##

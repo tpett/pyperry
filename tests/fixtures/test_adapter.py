@@ -1,4 +1,5 @@
 from pyperry.adapter.abstract_adapter import AbstractAdapter
+from pyperry.response import Response
 from copy import deepcopy
 
 class TestAdapter(AbstractAdapter):
@@ -28,3 +29,28 @@ class TestAdapter(AbstractAdapter):
         cls.data = {}
         cls.count = 1
 
+
+class SuccessAdapter(object):
+    """Adapter-like class where __call__ always returns a success response"""
+
+    def __init__(self):
+        self.response = Response(**{
+            'success': True,
+            'parsed': { 'id': 42 }
+        })
+
+    def __call__(self, **kwargs):
+        return self.response
+
+
+class FailureAdapter(object):
+    """Adapter-like class where __call__ always returns a failure response"""
+
+    def __init__(self):
+        self.response = Response(**{
+            'success': False,
+            'parsed': { 'base': 'record invalid', 'name': "can't be blank" }
+        })
+
+    def __call__(self, **kwargs):
+        return self.response
