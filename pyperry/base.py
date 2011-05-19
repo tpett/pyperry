@@ -471,7 +471,7 @@ class Base(object):
         set to false.  C{None} items are removed.
 
         """
-        return cls.read_adapter()(relation=relation)
+        return cls.adapter('read')(relation=relation)
 
     #{ Scoping
     @classmethod

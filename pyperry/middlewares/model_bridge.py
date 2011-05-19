@@ -43,7 +43,7 @@ class ModelBridge(object):
         """
         has_read_adapter = True
         try:
-            model.read_adapter()
+            model.adapter('read')
         except ConfigurationError:
             has_read_adapter = False
 

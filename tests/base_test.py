@@ -152,7 +152,7 @@ class AttributeAccessTestCase(BaseTestCase):
         self.assertEqual(test.foo, 'Mine')
 
 ##
-# Test setting of configure_read and it merging with superclass configuration
+# Test setting of configure('read') and it merging with superclass configuration
 #
 class AdapterConfigurationTestCase(BaseTestCase):
 

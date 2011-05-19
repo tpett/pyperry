@@ -82,14 +82,14 @@ class ModelBridgeWriteTestCase(ModelBridgeBaseTestCase):
 
     def setUp(self):
         self.model_class = BridgeTest
-        self.model_class.configure_read(adapter=TestAdapter)
+        self.model_class.configure('read', adapter=TestAdapter)
         self.model = self.model_class({})
-        self.model.read_adapter().data = { 'id': 42 }
+        self.model.adapter('read').data = { 'id': 42 }
         self.options = { 'object': self.model, 'mode': 'write' }
 
     def tearDown(self):
         try:
-            self.model.read_adapter().reset()
+            self.model.adapter('read').reset()
         except:
             pass
 
