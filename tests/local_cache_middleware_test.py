@@ -69,15 +69,16 @@ class LocalCacheInstalledTestCase(LocalCacheBaseTestCase):
 
     def test_interval_option(self):
         """should use interval option for longevity of new entries"""
-        self.Test.adapter('read', ).middlewares[0] = (LocalCache, { 'interval': 0 })
+        self.Test.read_adapter().middlewares = [
+                (LocalCache, { 'interval': 0 })]
         self.Test.first()
         self.Test.first()
         self.assertEqual(len(TestAdapter.calls), 2)
 
     def test_max_entry_size_option(self):
         """should only allow max_entry_size entries if set"""
-        self.Test.adapter('read', ).middlewares[0] = (
-                LocalCache, { 'max_entry_size': 2 })
+        self.Test.read_adapter().middlewares = [
+                (LocalCache, { 'max_entry_size': 2 })]
         TestAdapter.count = 3
         self.Test.first()
         self.Test.first()

@@ -38,6 +38,7 @@ from copy import copy
 
 import pyperry
 from pyperry import errors
+from pyperry.middlewares.model_bridge import ModelBridge
 
 class DelayedConfig(object):
     """
@@ -72,7 +73,7 @@ class AbstractAdapter(object):
         `mode` adapter
         """
         if not middlewares:
-            middlewares = []
+            middlewares = [(ModelBridge, {})]
 
         self.config = DelayedConfig(config)
         self.mode = mode
@@ -115,6 +116,7 @@ class AbstractAdapter(object):
     def __call__(self, **kwargs):
         """Makes a request to the stack"""
         pyperry.logger.info('%s: %s' % (self.mode, kwargs.keys()))
+        kwargs.update(mode='read')
         result = self.stack(**kwargs)
 
         if self.mode is 'read' and not hasattr(result, '__iter__'):

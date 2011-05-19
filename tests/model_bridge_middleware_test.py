@@ -32,15 +32,16 @@ class ModelBridgeReadTestCase(ModelBridgeBaseTestCase):
             def __init__(self):
                 self.called = False
                 self.args = None
+                self.return_value = [{ 'id': 1 }]
 
             def __call__(self, **kwargs):
                 self.called = True
                 self.args = kwargs
-                return [{ 'id': 1 }]
+                return self.return_value
 
         self.adapter = FakeAdapter()
         self.bridge = ModelBridge(self.adapter, {})
-        self.relation = pyperry.Base.scoped()
+        self.relation = Test.scoped()
         self.stack_opts = { 'relation': self.relation, 'mode': 'read' }
 
     def test_call_stack(self):
@@ -62,6 +63,13 @@ class ModelBridgeReadTestCase(ModelBridgeBaseTestCase):
         """should do nothing to result if no relation is given"""
         result = self.bridge(mode='read')
         self.assertEqual(result, [{ 'id': 1 }])
+
+    def test_records_have_none_types(self):
+        """should exclude none type records from results"""
+        self.adapter.return_value = [None, {'id': 1}, None]
+        result = self.bridge(**self.stack_opts)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].attributes, {'id': 1})
 
 
 class BridgeTest(Test):

@@ -3,6 +3,7 @@ import unittest
 import pyperry
 from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry import errors
+from pyperry.middlewares.model_bridge import ModelBridge
 
 class MiddlewareA(object):
     def __init__(self, next, options={}):
@@ -67,13 +68,20 @@ class InitTestCase(AdapterBaseTestCase):
         foo_val = 'GOOD'
         self.assertEqual(adapter.config.foo, 'GOOD')
 
-    def test_sets_inits_middleware(self):
-        """middleware should be set to empty list or the keyword if passed"""
+    def test_init_middleware(self):
+        """middlewares should include ModelBridge by default"""
+        adapter = AbstractAdapter({}, mode='read')
+        self.assertEqual(adapter.middlewares, [(ModelBridge, {})])
+
+    def test_init_middleware_with_kwargs(self):
+        """middelwares should be initialized to the middlewares key word
+        argument if provided"""
         adapter = AbstractAdapter({}, mode='read', middlewares=[1])
         self.assertEqual(adapter.middlewares, [1])
 
-        adapter = AbstractAdapter({}, mode='read')
-        self.assertEqual(adapter.middlewares, [])
+    def test_init_middleware_with_model_bridge(self):
+        """don't add the ModelBridge if it's already included"""
+        pass
 
     def test_declares_stack(self):
         """should declate a _stack attr"""
@@ -86,7 +94,8 @@ class InitTestCase(AdapterBaseTestCase):
         middlewares = [(MiddlewareA, {})]
         adapter = AbstractAdapter({ '_middlewares': middlewares },
             mode='read')
-        self.assertEquals(adapter.middlewares, middlewares)
+        self.assertEquals(adapter.middlewares,
+                AbstractAdapter({}, mode='read').middlewares + middlewares)
 
 
 ##
@@ -141,13 +150,13 @@ class CallMethodTestCase(AdapterBaseTestCase):
         """should raise excp if middleware returns a non iterable"""
         class BrokenMiddleware(object):
             def __init__(self, next, options={}): self.next = next
-            def __call__(self): pass
+            def __call__(self, **kwargs): pass
         self.adapter.middlewares = [(BrokenMiddleware, {})]
 
         self.assertEqual(self.adapter.stack.__class__.__name__,
                 'BrokenMiddleware')
 
-        self.assertRaises(errors.BrokenAdapterStack, self.adapter)
+        self.assertRaises(errors.BrokenAdapterStack, self.adapter, mode='read')
 
 ##
 # reset method
