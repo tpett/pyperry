@@ -24,11 +24,12 @@ This is an example of a Person model::
             # Define attributes
             cls.attributes('id', 'name', 'favorite_color')
 
+            # Basic adapter configuration
+            cls.configure('read', type='bertrpc', procedure='person')
+            cls.add_middleware('read', MyMiddleware, config='val')
+
             # Associations
             cls.has_one('address', class_name='Address')
-
-            # Basic adapter configuration
-            cls.configure('read', procedure='person')
 
             # Example of defining scopes
             cls.scope('ordered', cls.order('order_by'))
@@ -38,16 +39,29 @@ This is an example of a Person model::
 
         # ...
 
+Some example usage:
+
+    >>> bob = Person({ 'name': 'Bob' })
+    >>> bob.name
+    'Bob'
+    >>> bob.save()
+    True
+    >>> perry = Person.where({ 'name': 'Perry' }).first()
+    >>> perry.name
+    'Perry'
+    >>> perry.address()
+    #<Address ...>
+
 For detailed documentation on these methods see:
 
     - L{pyperry.base.Base.attributes}
+    - Adapter Configuration
+        - L{Base.configure}
+        - L{Base.add_middleware}
     - Associations
         - L{pyperry.base.Base.has_many}
         - L{pyperry.base.Base.has_one}
         - L{pyperry.base.Base.belongs_to}
-    - Configuration
-        - configure_read
-        - configure_write
     - L{pyperry.base.Base.scope}
 
 """

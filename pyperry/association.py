@@ -141,18 +141,22 @@ class BelongsTo(Association):
         return '%s_type' % self.id
 
     ##
-    # Returns a scope on the target containing this association
-    #
-    # Builds conditions on top of the base_scope generated from any finder
-    # options set with the association
-    #
-    # belongs_to('foo', foreign_key='foo_id')
-    #
-    # In addition to any finder options included with the association options
-    # the following scope will be added:
-    #  where('id = %s' % source['foo_id'])
     #
     def scope(self, obj):
+        """
+        Returns a scope on the target containing this association
+
+        Builds conditions on top of the base_scope generated from any finder
+        options set with the association::
+
+            belongs_to('foo', foreign_key='foo_id')
+
+        In addition to any finder options included with the association options
+        the following scope will be added::
+
+            where('id = %s' % source['foo_id'])
+
+        """
         if hasattr(obj, self.foreign_key) and obj[self.foreign_key]:
             return self._base_scope(obj).where({ self.primary_key:
                 obj[self.foreign_key] })
@@ -178,25 +182,27 @@ class Has(Association):
     def polymorphic_type(self):
         return '%s_type' % self.options['_as']
 
-    ##
-    # Returns a scope on the target containing this association
-    #
-    # Builds conditions on top of the base_scope generated from any finder
-    # options set with the association
-    #
-    #   has_many('widgets', klass=Widget, foreign_key='widget_id')
-    #   has_many('comments', _as='parent')
-    #
-    # In addition to any finder options included with the association options
-    # the following will be added:
-    #
-    #   where('widget_id = %s ' % source['id'])
-    #
-    # Or for the polymorphic :comments association:
-    #
-    #   where('parent_id = %s AND parent_type = %s' % (source['id'], source.class))
-    #
     def scope(self, obj):
+        """
+        Returns a scope on the target containing this association
+
+        Builds conditions on top of the base_scope generated from any finder
+        options set with the association::
+
+            has_many('widgets', klass=Widget, foreign_key='widget_id')
+            has_many('comments', _as='parent')
+
+        In addition to any finder options included with the association options
+        the following will be added::
+
+            where('widget_id = %s ' % source['id'])
+
+        Or for the polymorphic :comments association::
+
+            where('parent_id = %s AND parent_type = %s' % (source['id'],
+            source.class))
+
+        """
         if hasattr(obj, self.primary_key) and obj[self.primary_key]:
             scope = self._base_scope(obj).where({ self.foreign_key:
                 obj[self.primary_key] })

@@ -1,3 +1,39 @@
+"""
+Adapter Overview
+================
+
+Adapters provide the bridge between the mapped object and the data store.
+There are several layers to an adapter request and response::
+
+     Req  Resp
+  pyperry.base.Base
+      |     ^
+      V     |
+    Processors
+      |     ^
+      V     |
+    Middlewares
+      |     ^
+      V     |
+      Adapter
+        \/
+      Database
+
+The request is initiated by the L{pyperry.base.Base} class and passes through
+the adapter stack returning a response.  Within the stack the request goes
+through a series of configurable stack items: processors, and middlewares
+before being passed to the appropriate adapter method.  That adapter method
+then executes the requested action and returns the results back through the
+stack until returning to Base.
+
+Processors and middlewares are ways of customizing requests and responses.
+There is a middleware that is always installed called the ModelBridge.  It
+takes the raw response of the adapter and converts it to mapped objects.  The
+only difference between a middleware and a processor is that the objects
+returned to a processor are always instantiated records whereas middlewares
+receive the raw response.
+
+"""
 from copy import copy
 
 import pyperry
@@ -59,6 +95,7 @@ class AbstractAdapter(object):
         method.  This will allow middlewares to intercept requests, modify
         query information and pass it along, do things with the results of the
         query or any combination of these things.
+
         """
         if self._stack: return self._stack
 
