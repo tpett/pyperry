@@ -731,6 +731,22 @@ class BaseDestroyMethodTestCase(BasePersistenceTestCase):
 
 
 ##
+# Freezing objects
+#
+class BaseFreezeMethodsTestCase(BaseTestCase):
+
+    def setUp(self):
+        self.model = pyperry.Base({})
+
+    def test_default(self):
+        """model should not be frozen by default"""
+        self.assertEqual(self.model.frozen(), False)
+
+    def test_freeze(self):
+        """calling freeze should set frozen to false"""
+        self.model.freeze()
+        self.assertEqual(self.model.frozen(), True)
+##
 # Association methods
 #
 # Methods for managing the associations on a model

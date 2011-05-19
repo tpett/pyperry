@@ -20,6 +20,7 @@ class ModelBridge(object):
         return results
 
     def handle_read(self, records, **kwargs):
+        """Create perry.Base instances from the raw records dictionaries."""
         if 'relation' in kwargs:
             relation = kwargs['relation']
             records = [relation.klass(record) for record in records]
@@ -35,6 +36,11 @@ class ModelBridge(object):
         return response
 
     def handle_write_success(self, response, model):
+        """
+        Updates the model's state attributes and retrieves a fresh version of
+        the data attributes if a read adapter is configured.
+
+        """
         has_read_adapter = True
         try:
             model.read_adapter()
@@ -51,11 +57,28 @@ class ModelBridge(object):
         model.new_record = False
 
     def handle_write_failure(self, response, model):
+        """Updates the model instance when a save fails"""
         model.saved = False
-        errors = response.errors()
-        if len(errors) == 0:
-            errors = { 'base': 'record not saved' }
-        model.errors = errors
+        self.add_errors(response, model, 'record not saved')
 
     def handle_delete(self, response, **kwargs):
+        """Updates the model instance after a delete"""
+        if 'object' in kwargs:
+            model = kwargs['object']
+            if response.success:
+                model.freeze()
+            else:
+                self.add_errors(response, model, 'record not deleted')
         return response
+
+    def add_errors(self, response, model, default_message):
+        """
+        Copies the response errors to the model or uses a default error
+        message if the response errors are empty.
+
+        """
+        errors = response.errors()
+        if len(errors) == 0:
+            errors =  { 'base': default_message }
+        model.errors = errors
+

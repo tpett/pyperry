@@ -185,6 +185,7 @@ class Base(object):
         self.new_record = new_record
         self.saved = None
         self.errors = {}
+        self._frozen = False
 
     #{ Attribute access
     def __getitem__(self, key):
@@ -347,6 +348,17 @@ class Base(object):
 
     def reload(self):
         self.attributes = self.scoped().where({'id': 1}).first().attributes
+
+    def frozen(self):
+        """Returns True if this instance is frozen and cannot be saved."""
+        return self._frozen
+
+    def freeze(self):
+        """
+        Marks this instance as being frozen, which will cause all future
+        writes and deletes to fail.
+        """
+        self._frozen = True
 
     #{ Configuration
     @classmethod

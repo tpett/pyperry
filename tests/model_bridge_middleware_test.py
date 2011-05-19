@@ -170,21 +170,33 @@ class WriteNewRecordsTestCase(ModelBridgeWriteTestCase):
         ModelBridge(adapter)(**self.options)
 
 
-class ModelBridgeDeleteTestCase(ModelBridgeBaseTestCase):
+class ModelBridgeDeleteTestCase(ModelBridgeWriteTestCase):
+
+    def setUp(self):
+        super(ModelBridgeDeleteTestCase, self).setUp()
+        self.options['mode'] = 'delete'
 
     def test_freeze(self):
         """should freeze the model on success"""
-        pass
+        ModelBridge(SuccessAdapter())(**self.options)
+        self.assertEqual(self.model.frozen(), True)
 
-    def test_no_freeze_on_fail(self):
+    def test_not_freeze_on_fail(self):
         """should not freeze the model on failure"""
-        pass
+        ModelBridge(FailureAdapter())(**self.options)
+        self.assertEqual(self.model.frozen(), False)
 
     def test_add_errors(self):
         """should add error messages to the model on failure"""
-        pass
+        adapter = FailureAdapter()
+        adapter.response.parsed = { 'errors': { 'base': 'record not found' } }
+        ModelBridge(adapter)(**self.options)
+        self.assertEqual(self.model.errors, { 'base': 'record not found' })
 
     def test_add_default_errors(self):
         """should add a default error message to the model on failure even when
         the response has no error messages"""
-        pass
+        adapter = FailureAdapter()
+        adapter.response.parsed = None
+        ModelBridge(adapter)(**self.options)
+        self.assertEqual(self.model.errors, { 'base': 'record not deleted' })
