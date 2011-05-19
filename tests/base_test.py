@@ -4,6 +4,7 @@ import pyperry
 from pyperry import errors
 
 from tests.fixtures.test_adapter import TestAdapter
+import tests.fixtures.association_models
 
 class BaseTestCase(unittest.TestCase):
     pass
