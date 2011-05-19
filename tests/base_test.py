@@ -359,6 +359,15 @@ class BaseRelationMethodTestCase(BaseScopingTestCase):
         rel = self.Test.relation()
         self.assertEqual(hash(self.Test.relation()), hash(rel))
 
+    def test_no_relation_subclass_caching(self):
+        """should not copy cached relation to subclasses"""
+        base_rel = self.Test.relation()
+        class Subclass(self.Test): pass
+        subclass_rel = Subclass.relation()
+        self.assertNotEqual(hash(base_rel), hash(subclass_rel))
+        self.assertEqual(subclass_rel.klass, Subclass)
+
+
 class BaseCurrentScopeMethodTestCase(BaseScopingTestCase):
 
     def test_class_method(self):

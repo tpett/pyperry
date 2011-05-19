@@ -469,7 +469,8 @@ class Base(object):
         @return: C{Relation} instance for this model
 
         """
-        if not hasattr(cls, '_relation'): cls._relation = Relation(cls)
+        if not hasattr(cls, '_relation') or cls._relation.klass != cls:
+            cls._relation = Relation(cls)
         return cls._relation
 
     @classmethod
