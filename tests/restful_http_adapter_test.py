@@ -10,11 +10,8 @@ import pyperry.errors as errors
 import tests.helpers.http_test_server as http_server
 
 def setup_module():
-    """start the HTTP test server"""
-    try:
-        http_server.spawn()
-    except http_server.ServerAlreadyRunning:
-        pass
+    """ensure the HTTP test server is running"""
+    tests.run_http_server()
 
 class HttpAdapterTestCase(unittest.TestCase):
 

@@ -19,12 +19,25 @@ server_pid = None
 class ServerAlreadyRunning(Exception):
     pass
 
+def log(message):
+    logfile = open(path.join(RESPONSE_DIR, 'server.log'), 'a')
+    print >> logfile, message
+    logfile.close()
+
+def server_info(port, pid=None):
+    if pid is None:
+        pid = server_pid
+    return "(pid: %s, port: %s)" % (str(pid), str(port))
+
 def spawn(port=8888):
     """spawns an instance of the HTTP test server as a child process"""
     global server_pid
 
     if server_pid is not None:
-        raise ServerAlreadyRunning("pid: %d, port: %d" % (server_pid, port))
+        log("server already running " + server_info(port))
+        raise ServerAlreadyRunning(server_info(port))
+    else:
+        log("spawning server on port " + str(port))
 
     if not path.exists(RESPONSE_DIR):
         os.mkdir(RESPONSE_DIR)
@@ -40,18 +53,17 @@ def spawn(port=8888):
 
 def run_server(port=8888):
     # Prevents server output from showing up in our test runner output.
-    sys.stderr = open('/dev/null', 'w')
-    sys.stdout = open('/dev/null', 'w')
+    logfile = open(path.join(RESPONSE_DIR, 'server.log'), 'a')
+    os.dup2(logfile.fileno(), 2)
+    logfile.close()
 
     TCPServer.allow_reuse_address = True
     try:
         httpd = TCPServer(('', port), HttpTestRequestHandler)
-        print "http_test_server running (pid: %d, port: %d)" % (os.getpid(),
-                port)
+        log("http_test_server running " + server_info(port, os.getpid()))
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print "http_test_server shutting down (pid: %d, port: %d)" % (
-                os.getpid(), port)
+        log("http_test_server shutting down " + server_info(port, os.getpid()))
         try: httpd.socket.close()
         except: pass
         exit()
@@ -61,8 +73,11 @@ def kill():
     """stops this instance of the HTTP test server"""
     global server_pid
     if server_pid is not None:
-        os.kill(server_pid, signal.SIGTERM)
+        log("killing server (pid: %s)" % str(server_pid))
+        os.kill(server_pid, signal.SIGINT)
         os.wait() # beware of zombies
+    else:
+        log("server not running")
     server_pid = None
 
 def set_response(**kwargs):
