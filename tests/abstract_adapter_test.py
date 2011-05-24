@@ -162,6 +162,25 @@ class CallMethodTestCase(AdapterBaseTestCase):
 
         self.assertRaises(errors.BrokenAdapterStack, self.adapter, mode='read')
 
+class CallModeTestCase(AdapterBaseTestCase):
+
+    def setUp(self):
+        class CallModeAdapter(AbstractAdapter):
+            def stack(self, **kwargs): return kwargs
+        self.adapter = CallModeAdapter({}, mode='write')
+
+    def test_mode_in_kwargs(self):
+        """should include the adapter mode in the kwargs"""
+        kwargs = self.adapter()
+        self.assertEqual(kwargs['mode'], 'write')
+
+    def test_allows_mode_override(self):
+        """should allow adapter to be called with a different mode than the
+        adapter itself"""
+        kwargs = self.adapter(mode='delete')
+        self.assertEqual(kwargs['mode'], 'delete')
+
+
 ##
 # reset method
 #

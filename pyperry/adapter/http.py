@@ -20,7 +20,7 @@ class RestfulHttpAdapter(AbstractAdapter):
         #return response.parsed()
 
     def write(self, **kwargs):
-        model = kwargs['object']
+        model = kwargs['model']
         if model.new_record:
             method = 'POST'
         else:
@@ -32,7 +32,7 @@ class RestfulHttpAdapter(AbstractAdapter):
         return self.request('DELETE', **kwargs)
 
     def request(self, http_method, **kwargs):
-        model = kwargs['object']
+        model = kwargs['model']
         url = self.url_for(http_method, model)
         params = self.restful_params(self.params_for(model))
         http_response, body = self.http_request(http_method, url, params)
@@ -60,7 +60,7 @@ class RestfulHttpAdapter(AbstractAdapter):
             headers['content-type'] = 'application/x-www-form-urlencoded'
 
 
-        conn = httplib.HTTPConnection(self.config.host)
+        conn = httplib.HTTPConnection(self.config_value('host'))
         try:
             conn.request(http_method, url, encoded_params, headers)
             http_response = conn.getresponse()

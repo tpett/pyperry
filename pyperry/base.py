@@ -306,7 +306,7 @@ class Base(object):
         @return: Returns C{True} on success or C{False} on failure
 
         """
-        return self.adapter('write')(model=self)
+        return self.adapter('write')(model=self).success
 
     def update_attributes(self, attributes=None, **kwargs):
         """
@@ -342,7 +342,7 @@ class Base(object):
         @return: C{True} on success or C{False} on failure
 
         """
-        return self.adapter('write')(model=self, delete=True)
+        return self.adapter('write')(model=self, mode='delete').success
     delete = destroy
     #}
 

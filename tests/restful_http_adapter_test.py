@@ -36,6 +36,13 @@ class ConfigTestCase(HttpAdapterTestCase):
         for option, value in self.config.items():
             self.assertEqual(getattr(self.adapter.config, option), value)
 
+    def test_missing_host(self):
+        """should raise if host is not configured"""
+        del self.config['host']
+        adapter = RestfulHttpAdapter(self.config, mode='read')
+        self.assertRaises(errors.ConfigurationError, adapter.http_request,
+                          'GET', 'foo', {})
+
 class UrlForMethodTestCase(HttpAdapterTestCase):
 
     def test_url_with_get(self):
@@ -203,7 +210,7 @@ class PersistenceTestCase(HttpAdapterTestCase):
         """should return an initialized Response object indicating success"""
         if type(self) is PersistenceTestCase: return
         self.respond_with_success(headers={'foo':'bar'})
-        response = self.adapter_method(object=self.model)
+        response = self.adapter_method(model=self.model)
         self.assertEqual(type(response), Response)
         self.assertEqual(response.status, 200)
         self.assertEqual(response.success, True)
@@ -216,7 +223,7 @@ class PersistenceTestCase(HttpAdapterTestCase):
         """should return an initialized Response object indicating failure"""
         if type(self) is PersistenceTestCase: return
         self.respond_with_failure(headers={'foo':'bar'})
-        response = self.adapter_method(object=self.model)
+        response = self.adapter_method(model=self.model)
         self.assertEqual(type(response), Response)
         self.assertEqual(response.status, 500)
         self.assertEqual(response.success, False)
@@ -230,7 +237,7 @@ class PersistenceTestCase(HttpAdapterTestCase):
         request"""
         if type(self) is PersistenceTestCase: return
         self.respond_with_success()
-        response = self.adapter_method(object=self.model)
+        response = self.adapter_method(model=self.model)
         last_request = http_server.last_request()
         self.assertEqual(last_request['method'], self.http_method)
         self.assertEqual(last_request['headers']['accept'], 'application/xml')

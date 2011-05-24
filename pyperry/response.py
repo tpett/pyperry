@@ -48,10 +48,12 @@ class Response(object):
         """
         if not hasattr(self, '_parsed'):
             parser = self.PARSERS[self.raw_format]()
-            if self.raw == None:
-                self._parsed = None
-            else:
-                self._parsed = parser.parse(self.raw)
+            self._parsed = None
+            if self.raw is not None:
+                try:
+                    self._parsed = parser.parse(self.raw)
+                except:
+                    pass # return None if raw could not be parsed
         return self._parsed
 
     def model_attributes(self):

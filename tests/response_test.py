@@ -85,6 +85,11 @@ class ResponseParsingTestCase(ResponseBaseTestCase):
         self.response.raw_format = 'asdf'
         self.assertRaises(KeyError, self.response.parsed)
 
+    def test_invalid_format(self):
+        """should return None and not raise if raw response can't be parsed"""
+        self.response.raw = '}'
+        self.assertEqual(self.response.parsed(), None)
+
 
 class ModelAttributesMethodTest(ResponseBaseTestCase):
 

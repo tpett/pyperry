@@ -618,24 +618,6 @@ class BaseSaveMethodTestCase(BasePersistenceTestCase):
         """should be an instance method"""
         self.assertEqual(self.Test.save.im_class, self.Test)
 
-    def test_calls_write_adapter(self):
-        """should call write adapter passing current model"""
-        self.test.save()
-        self.assertEqual(len(TestAdapter.calls), 1)
-        self.assertEqual(TestAdapter.calls[0][0], 'write')
-        self.assertEqual(TestAdapter.calls[0][1]['model'].attributes,
-                self.test.attributes)
-
-
-    def test_true_on_success(self):
-        """should return true for success"""
-        TestAdapter.return_val = True
-        self.assertTrue(self.test.save())
-
-    def test_false_on_failure(self):
-        """should return false for failure"""
-        TestAdapter.return_val = False
-        self.assertFalse(self.test.save())
 
 ##
 # update_attributes method
@@ -646,30 +628,6 @@ class BaseUpdateAttributesMethodTestCase(BasePersistenceTestCase):
         """should be an instance method"""
         self.assertEqual(self.Test.update_attributes.im_class, self.Test)
 
-    def test_sets_attributes(self):
-        """should set any provided attributes"""
-        self.test.update_attributes({'id': 2})
-        self.assertEqual(self.test.id, 2)
-        self.test.update_attributes(id=3)
-        self.assertEqual(self.test.id, 3)
-
-    def test_saves_after_set(self):
-        """should run save after setting attributes"""
-        self.test.update_attributes({ 'id': 2 })
-        self.assertEqual(TestAdapter.calls[0][0], 'write')
-        self.assertEqual(TestAdapter.calls[0][1]['model'].attributes,
-                { 'id': 2 })
-
-    def test_true_on_success(self):
-        """should return true for success"""
-        TestAdapter.return_val = True
-        self.assertTrue(self.test.update_attributes())
-
-    def test_false_on_failure(self):
-        """should return false for failure"""
-        TestAdapter.return_val = False
-        self.assertFalse(self.test.update_attributes())
-
 ##
 # destroy method
 #
@@ -678,25 +636,6 @@ class BaseDestroyMethodTestCase(BasePersistenceTestCase):
     def test_instance_method(self):
         """should be an instance method"""
         self.assertEqual(self.Test.destroy.im_class, self.Test)
-
-
-    def test_calls_write(self):
-        """should call write adapter for current model with delete=True"""
-        self.test.destroy()
-        (mode, dic) = TestAdapter.calls[0]
-        self.assertEqual(mode, 'write')
-        self.assertEqual(dic['model'].attributes, self.test.attributes)
-        self.assertTrue(dic['delete'])
-
-    def test_true_on_success(self):
-        """should return true for success"""
-        TestAdapter.return_val = True
-        self.assertTrue(self.test.destroy())
-
-    def test_false_on_failure(self):
-        """should return false for failure"""
-        TestAdapter.return_val = False
-        self.assertFalse(self.test.delete())
 
     def test_alias(self):
         """should be aliased as delete"""

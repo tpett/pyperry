@@ -27,8 +27,8 @@ class ModelBridge(object):
         return records
 
     def handle_write(self, response, **kwargs):
-        if 'object' in kwargs:
-            model = kwargs['object']
+        if 'model' in kwargs:
+            model = kwargs['model']
             if response.success:
                 self.handle_write_success(response, model)
             else:
@@ -63,8 +63,8 @@ class ModelBridge(object):
 
     def handle_delete(self, response, **kwargs):
         """Updates the model instance after a delete"""
-        if 'object' in kwargs:
-            model = kwargs['object']
+        if 'model' in kwargs:
+            model = kwargs['model']
             if response.success:
                 model.freeze()
             else:

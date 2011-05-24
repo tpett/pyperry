@@ -85,7 +85,7 @@ class ModelBridgeWriteTestCase(ModelBridgeBaseTestCase):
         self.model_class.configure('read', adapter=TestAdapter)
         self.model = self.model_class({})
         self.model.adapter('read').data = { 'id': 42 }
-        self.options = { 'object': self.model, 'mode': 'write' }
+        self.options = { 'model': self.model, 'mode': 'write' }
 
     def tearDown(self):
         try:
