@@ -108,8 +108,12 @@ class IsAbstractTestCase(AdapterBaseTestCase):
         self.assertRaises(NotImplementedError, self.adapter.read)
 
     def test_write_abstract(self):
-        """read method should raise NotImplementedError"""
+        """write method should raise NotImplementedError"""
         self.assertRaises(NotImplementedError, self.adapter.write)
+
+    def test_delete_abstract(self):
+        """delete method should raise NotImplementedError"""
+        self.assertRaises(NotImplementedError, self.adapter.delete)
 
 ##
 # Define stack method that returns a callable stack of middlewares / adapter

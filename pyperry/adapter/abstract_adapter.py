@@ -133,3 +133,6 @@ class AbstractAdapter(object):
         """Write object's attributes to the datastore"""
         raise NotImplementedError("You must define this method in subclasses")
 
+    def delete(self, **kwargs):
+        """Delete the object from the datastore"""
+        raise NotImplementedError("You must define this method in subclasses")

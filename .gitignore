@@ -3,4 +3,4 @@ dist/
 pyperry.egg-info/
 *.pyc
 html/
-
+*.pkl
