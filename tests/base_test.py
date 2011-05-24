@@ -618,6 +618,13 @@ class BaseSaveMethodTestCase(BasePersistenceTestCase):
         """should be an instance method"""
         self.assertEqual(self.Test.save.im_class, self.Test)
 
+    def test_raise_when_no_id(self):
+        """
+        should raise when attempting to save an existing record without an id
+        """
+        model = self.Test({}, False)
+        self.assertRaises(errors.PersistenceError, model.save)
+
 
 ##
 # update_attributes method
@@ -627,6 +634,7 @@ class BaseUpdateAttributesMethodTestCase(BasePersistenceTestCase):
     def test_instance_method(self):
         """should be an instance method"""
         self.assertEqual(self.Test.update_attributes.im_class, self.Test)
+
 
 ##
 # destroy method
@@ -641,6 +649,17 @@ class BaseDestroyMethodTestCase(BasePersistenceTestCase):
         """should be aliased as delete"""
         self.assertEqual(self.test.delete, self.test.destroy)
 
+    def test_raise_when_new_record(self):
+        """should raise when attempting to delete a new record"""
+        self.test.new_record = True
+        self.assertRaises(errors.PersistenceError, self.test.delete)
+
+    def test_raise_when_no_id(self):
+        """should raise when attempting to delete a record without an id"""
+        model = self.Test({}, False)
+        self.assertRaises(errors.PersistenceError, model.delete)
+
+
 
 ##
 # reload method
@@ -651,7 +670,7 @@ class ReloadTest(pyperry.Base):
         cls.attributes('id', 'a', 'b')
 
 
-class BaseDestroyMethodTestCase(BasePersistenceTestCase):
+class BaseReloadMethodTestCase(BasePersistenceTestCase):
 
     def _fake_fetch_records(cls, relation):
         return [ReloadTest({ 'id': 2, 'a': 3, 'b': 4 })]
@@ -675,6 +694,9 @@ class BaseDestroyMethodTestCase(BasePersistenceTestCase):
 class BaseFreezeMethodsTestCase(BaseTestCase):
 
     def setUp(self):
+        class Test(pyperry.Base): pass
+        Test.attributes('id')
+        self.test_model = Test({'id':1}, False)
         self.model = pyperry.Base({})
 
     def test_default(self):
@@ -685,6 +707,18 @@ class BaseFreezeMethodsTestCase(BaseTestCase):
         """calling freeze should set frozen to false"""
         self.model.freeze()
         self.assertEqual(self.model.frozen(), True)
+
+    def test_raise_on_write_when_frozen(self):
+        """should raise on save if model is frozen"""
+        self.test_model.freeze()
+        self.assertRaises(errors.PersistenceError, self.test_model.save)
+
+    def test_raise_on_delete_when_frozen(self):
+        """should raise on delete if model is frozen"""
+        self.test_model.freeze()
+        self.assertRaises(errors.PersistenceError, self.test_model.delete)
+
+
 ##
 # Association methods
 #

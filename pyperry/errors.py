@@ -12,3 +12,6 @@ class ModelNotDefined(Exception):
 
 class AmbiguousClassName(Exception):
     pass
+
+class PersistenceError(Exception):
+    pass

@@ -89,13 +89,3 @@ class PersistenceIntegrationTestCase(unittest.TestCase):
         self.assertEqual(model.delete(), False)
         self.assertEqual(model.frozen(), False)
         self.assertEqual(model.errors['base'], 'record not deleted')
-
-##
-# TODO: these next three tests can be unit tests
-##
-    def test_raise_on_read_when_frozen(self): pass
-    def test_raise_on_write_when_frozen(self): pass
-    def test_raise_on_delete_when_frozen(self): pass
-    def test_raise_on_delete_when_new_record(self): pass
-    def test_raise_on_write_when_no_id_and_not_new_record(self): pass
-    def test_raise_on_delete_when_no_id(self): pass
