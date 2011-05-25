@@ -82,13 +82,25 @@ def kill():
 
 def set_response(**kwargs):
     """sets the response returned for all HTTP requests"""
+    method = 'ANY'
+    if 'method' in kwargs:
+        method = kwargs['method'].upper()
+        del kwargs['method']
+
     response = {
         'status': 200,
         'headers': {},
         'body': 'OK'
     }
     response.update(kwargs)
-    _write(response)
+    response = {method: response}
+
+    stored_responses = _read()
+    stored_responses.update(response)
+    _write(stored_responses)
+
+def clear_responses(**kwargs):
+    _write({})
 
 def last_request():
     return _read('request')
@@ -117,7 +129,7 @@ class HttpTestRequestHandler(BaseHTTPRequestHandler):
     regardless of the request method or paramters.
     """
 
-    def do_response(self):
+    def do_response(self, http_method):
         global last_request, last_response
 
         if not path.exists(RESPONSE_PATH):
@@ -131,6 +143,11 @@ class HttpTestRequestHandler(BaseHTTPRequestHandler):
             'headers': dict(self.headers)
         }, 'request')
 
+        if http_method in response:
+            response = response[http_method]
+        else:
+            response = response['ANY']
+
         self.send_response(response['status'])
         for k, v in response['headers'].items():
             self.send_header(k, v)
@@ -138,16 +155,16 @@ class HttpTestRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(response['body'])
 
     def do_GET(self):
-        self.do_response()
+        self.do_response('GET')
 
     def do_POST(self):
-        self.do_response()
+        self.do_response('POST')
 
     def do_PUT(self):
-        self.do_response()
+        self.do_response('PUT')
 
     def do_DELETE(self):
-        self.do_response()
+        self.do_response('DELETE')
 
 if __name__ == '__main__':
     port = 8888

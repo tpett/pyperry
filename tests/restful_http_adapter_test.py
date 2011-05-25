@@ -29,6 +29,7 @@ class HttpAdapterTestCase(unittest.TestCase):
 
     def tearDown(self):
         del self.config
+        http_server.clear_responses()
 
 class ConfigTestCase(HttpAdapterTestCase):
 

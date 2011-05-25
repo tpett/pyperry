@@ -1,5 +1,6 @@
 import tests
 import unittest
+import json
 import pyperry
 import tests.helpers.http_test_server as http_server
 from pyperry.adapter.http import RestfulHttpAdapter
@@ -11,10 +12,22 @@ def setup_module():
 class TestModel(pyperry.Base):
     def _config(c):
         c.attributes('id', 'foo')
-        c.configure('write', adapter=RestfulHttpAdapter,
-                service='test_model', host='localhost:8888')
+        adapter_conf = {
+            'adapter': RestfulHttpAdapter,
+            'service': 'test_models',
+            'host': 'localhost:8888'
+        }
+        c.configure('read', **adapter_conf)
+        c.configure('write', **adapter_conf)
 
-class PersistenceIntegrationTestCase(unittest.TestCase):
+class RestfulIntegrationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        http_server.set_response(method='GET',
+                body=json.dumps([{"id": 42, "foo": "bar"}]))
+
+    def tearDown(self):
+        http_server.clear_responses()
 
     def test_middleware(self):
         """should include the ModelBridge in the adapter middlewares"""
@@ -26,9 +39,24 @@ class PersistenceIntegrationTestCase(unittest.TestCase):
         """should have correct mode for each adapter"""
         self.assertEqual(TestModel.adapter('write').mode, 'write')
 
+    def test_query(self):
+        records = [
+            {'id': 1, 'foo': 'bar'},
+            {'id': 2, 'foo': 'bar'},
+            {'id': 3, 'foo': 'bar'}
+        ]
+        http_server.set_response(method='GET', body=json.dumps(records))
+        models = TestModel.where({'foo': 'bar'}).limit(3).all()
+        self.assertEqual(len(models), 3)
+        for i, model in enumerate(models):
+            self.assertEqual(type(model), TestModel)
+            self.assertEqual(model.new_record, False)
+            self.assertEqual(model.id, records[i]['id'])
+            self.assertEqual(model.foo, records[i]['foo'])
+
     def test_create_success(self):
         """should create a model through the RestfulHttpAdapter"""
-        http_server.set_response(body='{"id":42,"foo":"bar"}')
+        http_server.set_response(body=json.dumps({"id": 42, "foo": "bar"}))
         model = TestModel({})
         self.assertEqual(model.new_record, True)
         self.assertEqual(model.save(), True)
@@ -37,8 +65,9 @@ class PersistenceIntegrationTestCase(unittest.TestCase):
 
     def test_create_failure(self):
         """should handle a failed create appropriately"""
-        http_server.set_response(body='{"errors":{"foo":"is not bar"}}',
-                status=500)
+        http_server.set_response(status=500, body=json.dumps({
+            "errors": {"foo": "is not bar"}
+        }))
         model = TestModel({})
         self.assertEqual(model.new_record, True)
         self.assertEqual(model.save(), False)
@@ -47,8 +76,13 @@ class PersistenceIntegrationTestCase(unittest.TestCase):
         self.assertEqual(model.errors['foo'], 'is not bar')
 
     def test_update_attributes_with_keywords(self):
-        """should update a model through the RestfulHttpAdapter"""
-        http_server.set_response(body='{"id":7,"foo":"bar"}')
+        """
+        should update a model with the attributes given as keyword args through
+        the RestfulHttpAdapter
+        """
+        attrs = {"id": 7, "foo": "bar"}
+        http_server.set_response(body=json.dumps(attrs))
+        http_server.set_response(method='GET', body=json.dumps([attrs]))
         model = TestModel({}, False)
         self.assertEqual(model.update_attributes(id=7, foo='bar'), True)
         self.assertEqual(model.saved, True)
@@ -57,8 +91,13 @@ class PersistenceIntegrationTestCase(unittest.TestCase):
         self.assertEqual(model.foo, 'bar')
 
     def test_update_attributes_with_dict(self):
-        """should update a model through the RestfulHttpAdapter"""
-        http_server.set_response(body='{"id":7,"foo":"bar"}')
+        """
+        should update a model with given attribute dict through the
+        RestfulHttpAdapter
+        """
+        attrs = {"id": 7, "foo": "bar"}
+        http_server.set_response(body=json.dumps(attrs))
+        http_server.set_response(method='GET', body=json.dumps([attrs]))
         model = TestModel({}, False)
         self.assertEqual(model.update_attributes({'id':7, 'foo':'bar'}), True)
         self.assertEqual(model.saved, True)
@@ -68,8 +107,9 @@ class PersistenceIntegrationTestCase(unittest.TestCase):
 
     def test_update_attributes_failure(self):
         """should handle a failed update appropriately"""
-        http_server.set_response(body='{"errors":{"foo":"is not bar"}}',
-                status=500)
+        http_server.set_response(status=500, body=json.dumps({
+            "errors":{"foo":"is not bar"}
+        }))
         model = TestModel({}, False)
         self.assertEqual(model.update_attributes({'id':7, 'foo':'boo'}), False)
         self.assertEqual(model.saved, False)

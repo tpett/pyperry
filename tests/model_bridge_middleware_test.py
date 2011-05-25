@@ -71,6 +71,11 @@ class ModelBridgeReadTestCase(ModelBridgeBaseTestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].attributes, {'id': 1})
 
+    def test_new_record_false(self):
+        """returned records should have their new_record attr set to false"""
+        result = self.bridge(**self.stack_opts)
+        self.assertEqual(result[0].new_record, False)
+
 
 class BridgeTest(Test):
     def _config(cls):

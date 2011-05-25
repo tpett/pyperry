@@ -23,7 +23,8 @@ class ModelBridge(object):
         """Create perry.Base instances from the raw records dictionaries."""
         if 'relation' in kwargs:
             relation = kwargs['relation']
-            records = [relation.klass(record) for record in records if record]
+            records = [relation.klass(record, False)
+                       for record in records if record]
         return records
 
     def handle_write(self, response, **kwargs):
