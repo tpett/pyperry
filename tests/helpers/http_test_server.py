@@ -154,6 +154,11 @@ class HttpTestRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(response['body'])
 
+        sleep(0.005)
+        # Throttle request to avoid 'Connection reset by peer' errors. This
+        # error seems to be happening because the server is closing the
+        # connection before the client has a chance to read the response body.
+
     def do_GET(self):
         self.do_response('GET')
 
