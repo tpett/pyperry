@@ -3,7 +3,7 @@ import httplib
 import mimetypes
 
 from pyperry.adapter.abstract_adapter import AbstractAdapter
-from pyperry.errors import ConfigurationError
+from pyperry.errors import ConfigurationError, MalformedResponse
 from pyperry.response import Response
 
 ERRORS = {
@@ -13,11 +13,24 @@ ERRORS = {
 
 class RestfulHttpAdapter(AbstractAdapter):
 
-    #def read(self, **kwargs):
-        #"""performs an HTTP GET request using the relation hash to construct
-        #query parameters"""
-        #response = self.request('GET', **kwargs)
-        #return response.parsed()
+    def read(self, **kwargs):
+        """
+        Performs an HTTP GET request and uses the relation dict to construct
+        the query string parameters
+
+        """
+        relation = kwargs['relation']
+        url = self.url_for('GET')
+        params = self.restful_params(relation.query())
+        if len(params) > 0:
+            url += '?' + urllib.urlencode(params)
+
+        http_response, body = self.http_request('GET', url, params, **kwargs)
+        response = self.response(http_response, body)
+        records = response.parsed()
+        if not isinstance(records, list):
+            raise MalformedResponse('parsed response is not a list')
+        return records
 
     def write(self, **kwargs):
         model = kwargs['model']
@@ -26,12 +39,12 @@ class RestfulHttpAdapter(AbstractAdapter):
         else:
             method = 'PUT'
 
-        return self.request(method, **kwargs)
+        return self.persistence_request(method, **kwargs)
 
     def delete(self, **kwargs):
-        return self.request('DELETE', **kwargs)
+        return self.persistence_request('DELETE', **kwargs)
 
-    def request(self, http_method, **kwargs):
+    def persistence_request(self, http_method, **kwargs):
         model = kwargs['model']
         url = self.url_for(http_method, model)
         params = self.restful_params(self.params_for(model))
@@ -72,16 +85,17 @@ class RestfulHttpAdapter(AbstractAdapter):
 
         return (http_response, response_body)
 
-    def url_for(self, http_method, model):
+    def url_for(self, http_method, model=None):
         """Constructs the URL for the request"""
         self.config_value('service')
 
         service = self.config.service
         primary_key = self.config_value('primary_key', 'id')
-        pk_value = getattr(model, primary_key)
+        if model is not None:
+            pk_value = getattr(model, primary_key)
         format = self.config_value('format', 'json')
 
-        if http_method is 'POST':
+        if http_method is 'POST' or model is None:
             url_tmpl = "/%s.%s"
             tmpl_args = (service, format)
         else:
@@ -104,10 +118,27 @@ class RestfulHttpAdapter(AbstractAdapter):
 
         return params
 
-    def restful_params(self, params, key_prefix=None):
+    def config_value(self, option, default=None):
         """
-        Recursively flattens nested hases so they can be understood by our
-        web services.
+        Returns the value of the configuration option named by option.
+
+        If the option is not configured, this method will use the default value
+        if given. Otherwise a ConfigurationError will be thrown.
+
+        """
+        if hasattr(self.config, option):
+            value = getattr(self.config, option)
+        elif default is not None:
+            value = default
+        else:
+            raise ConfigurationError, ERRORS[option]
+        return value
+
+    def restful_params(self, params, key_prefix=''):
+        """
+        Recursively flattens nested dicts into a list of (key, value) tuples
+        so they can be encoded as a query string that can be understood by our
+        webservices.
 
         In particular, our webservices require nested dicts to be transformed
         to a format where the nesting is indiciated by a key naming syntax
@@ -121,7 +152,7 @@ class RestfulHttpAdapter(AbstractAdapter):
         {
           'key': 'value',
           'foo': {
-            'nested': 'value',
+            'list': [1, 2, 3],
             'bar': {
               'double-nested': 'value'
             }
@@ -129,41 +160,52 @@ class RestfulHttpAdapter(AbstractAdapter):
         }
 
         Example output:
-        {
-          'key': 'value',
-          'foo[nested]': 'value',
-          'foo[bar][double-nested]': 'value'
-        }
+        [
+          ('key', 'value'),
+          ('foo[list][]', 1), ('foo[list][]', 2), ('foo[list][]', 3),
+          ('foo[bar][double-nested]', 'value')
+        ]
 
-        Considerations:
-         - You still must pass this to the urllib.urlencode() function before
-           using it in an HTTP call.
-         - This implementation does not support converting array values.
+        When calling the urlencode on the result of this method, you will
+        generate a query string similar to the following. The order of the
+        parameters may vary except that successive array elements will also
+        be successive in the query string.
+
+        'key=value&foo[list][]=1&foo[list][]=2&foo[list][]=3&foo[bar][double-nested]=value'
 
         """
-        restful = {}
-        for k, v in params.items():
-            if isinstance(v, dict):
-                k1 = k
-                if key_prefix is not None:
-                    k1 = '%s[%s]' % (key_prefix, k)
-                restful.update(self.restful_params(v, k1))
-            else:
-                k2 = k
-                if key_prefix is not None:
-                    k2 = '%s[%s]' % (key_prefix, k)
-                restful[k2] = v
+        restful = self.params_for_dict(params, [], '')
         return restful
 
-    def response_for(self, status, headers, body):
-        """Build a pyperry Response from the raw HTTP response components"""
-        pass
+    def params_for_dict(self, params, params_list, key_prefix=''):
+        for key, value in params.iteritems():
+            new_key_prefix = self.key_for_params(key, value, key_prefix)
 
-    def config_value(self, option, default=None):
-        if hasattr(self.config, option):
-            value = getattr(self.config, option)
-        elif default is not None:
-            value = default
+            if isinstance(value, dict):
+                self.params_for_dict(value, params_list, new_key_prefix)
+            elif isinstance(value, list):
+                self.params_for_list(value, params_list, new_key_prefix)
+            else:
+                params_list.append((new_key_prefix, value))
+
+        return params_list
+
+    def params_for_list(self, params, params_list, key_prefix=''):
+        for value in params:
+            if isinstance(value, dict):
+                self.params_for_dict(value, params_list, key_prefix)
+            elif isinstance(value, list):
+                self.params_for_list(value, params_list, key_prefix + '[]')
+            else:
+                params_list.append((key_prefix, value))
+
+    def key_for_params(self, key, value, key_prefix=''):
+        if len(key_prefix) > 0:
+            new_key_prefix = '%s[%s]' % (key_prefix, key)
         else:
-            raise ConfigurationError, ERRORS[option]
-        return value
+            new_key_prefix = key
+
+        if isinstance(value, list):
+            new_key_prefix += '[]'
+
+        return new_key_prefix

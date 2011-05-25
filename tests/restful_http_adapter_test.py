@@ -1,6 +1,7 @@
 import tests
 import unittest
 from copy import copy
+import json
 
 import pyperry
 from pyperry.adapter.http import RestfulHttpAdapter
@@ -88,6 +89,11 @@ class UrlForMethodTestCase(HttpAdapterTestCase):
         url = adapter.url_for('GET', model)
         self.assertEqual(url, '/widgets/12345.xml')
 
+    def test_no_model(self):
+        """should construct proper URL if no model given"""
+        url = self.adapter.url_for('GET')
+        self.assertEqual(url, '/widgets.xml')
+
 
 class ParamsForMethodTestCase(HttpAdapterTestCase):
 
@@ -135,56 +141,50 @@ class ParamsForMethodTestCase(HttpAdapterTestCase):
         self.assertEqual(adapter.config.default_params, expected)
 
 
-class RestfulParamsTestCase(HttpAdapterTestCase):
-
-    def test_empty_dict(self):
-        """should return an empty dict when given an empty dict"""
-        expected = {}
-        actual = self.adapter.restful_params({})
-        self.assertEqual(actual, expected)
-
-    def test_simple_dict(self):
-        """should return an equivalent dict when given a dict with no nested
-        dicts"""
-        expected = {'foo':'bar', 'biz':'baz'}
-        actual = self.adapter.restful_params(copy(expected))
-        self.assertEqual(actual, expected)
-
-    def test_nested_dict(self):
-        """should modify keys on the nested dict so that there are no nested
-        dicts"""
-        input = {'download': {'file_name': 'foo', 'format':'json'}}
-        expected = {'download[file_name]': 'foo', 'download[format]': 'json'}
-        actual = self.adapter.restful_params(input)
-        self.assertEqual(actual, expected)
-
-    def test_multiply_nested_dict(self):
-        """should modify keys on multiply nested dicts so there are no nested
-        dicts"""
-        input = {
-            'foo': 'bar',
-            'nested': {
-                'biz': 'baz',
-                'double-nested': {
-                    'tomato': 'toe-maw-toe',
-                    'potato': 'poe-taw-toe'
-                }
-            },
-            'numbers': [1, 2, 3, 4, 5]
-        }
-        expected = {
-            'foo': 'bar',
-            'nested[biz]': 'baz',
-            'nested[double-nested][tomato]': 'toe-maw-toe',
-            'nested[double-nested][potato]': 'poe-taw-toe',
-            'numbers': [1, 2, 3, 4, 5]
-        }
-        actual = self.adapter.restful_params(input)
-        self.assertEqual(actual, expected)
-
-
 class ReadTestCase(HttpAdapterTestCase):
-    pass
+
+    def setUp(self):
+        self.config = { 'host': 'localhost:8888', 'service': 'foo' }
+        self.adapter = RestfulHttpAdapter(self.config, mode='read')
+        self.records = [{'id': 1}, {'id': 2}, {'id': 3}]
+        http_server.set_response(body=json.dumps(self.records))
+
+    def test_request(self):
+        """should make an HTTP GET request"""
+        self.adapter.read(relation=pyperry.Base.scoped())
+        last_request = http_server.last_request()
+        self.assertEqual(last_request['method'], 'GET')
+        self.assertEqual(last_request['headers']['accept'], 'application/json')
+        self.assertEqual(last_request['path'], '/foo.json')
+
+    def test_relation_in_query(self):
+        """should encode the relation dict in the query string"""
+        B = pyperry.Base
+        relation = B.select('id', 'foo', 'bar').where({'id':6}).limit(1)
+        expected = "where[][id]=6&select[]=id&select[]=foo&select[]=bar&limit=1"
+        expected = expected.replace('[', '%5B').replace(']', '%5D')
+        expected = expected.split('&')
+        expected.sort()
+
+        self.adapter.read(relation=relation)
+        last_request = http_server.last_request()
+        query = last_request['path'].split('?')[1]
+        query = query.split('&')
+        query.sort()
+
+        self.assertEqual(query, expected)
+
+    def test_records(self):
+        """should return a list of records retrieved from the response"""
+        result = self.adapter.read(relation=pyperry.Base.scoped())
+        self.assertEqual(result, self.records)
+
+    def test_raise_if_not_list(self):
+        """should raise if parsed response is not a list of records"""
+        http_server.set_response(body=json.dumps({}))
+        self.assertRaises(errors.MalformedResponse, self.adapter.read,
+                          relation=pyperry.Base.scoped())
+
 
 class PersistenceTestCase(HttpAdapterTestCase):
     """
@@ -267,6 +267,7 @@ class UpdateTestCase(PersistenceTestCase):
         self.adapter_method = self.adapter.write
         print "\n\tUpdateTestCase"
 
+
 class DeleteTestCase(PersistenceTestCase):
     """Run tests from PersistenceTestCase configured for deleting a record"""
 
@@ -276,3 +277,129 @@ class DeleteTestCase(PersistenceTestCase):
         self.http_method = 'DELETE'
         self.adapter_method = self.adapter.delete
         print "\n\tDeleteTestCase"
+
+
+class RestfulParamsTestCase(HttpAdapterTestCase):
+
+    def test_empty_dict(self):
+        """should return an empty list when given an empty dict"""
+        expected = []
+        actual = self.adapter.restful_params({})
+        self.assertEqual(actual, expected)
+
+    def test_simple_dict(self):
+        """should return a list of (key, value) tuples for the dict"""
+        input = {'foo': 'bar', 'biz': 'baz'}
+        expected = [('foo', 'bar'), ('biz', 'baz')]
+        actual = self.adapter.restful_params(input)
+        actual.sort()
+        expected.sort()
+        self.assertEqual(actual, expected)
+
+    def test_nested_dict(self):
+        """should flatten keys from nested dicts"""
+        input = {'download': {'file_name': 'foo', 'format':'json'}}
+        expected = [
+                ('download[file_name]', 'foo'),
+                ('download[format]', 'json')
+            ]
+        actual = self.adapter.restful_params(input)
+        actual.sort()
+        expected.sort()
+        self.assertEqual(actual, expected)
+
+    def test_multiply_nested_dict(self):
+        """should flatten keys from multiply nested dicts"""
+        input = {
+            'foo': 'bar',
+            'nested': {
+                'biz': 'baz',
+                'double-nested': {
+                    'tomato': 'toe-maw-toe',
+                    'potato': 'poe-taw-toe'
+                }
+            }
+        }
+        expected = [
+            ('foo', 'bar'),
+            ('nested[biz]', 'baz'),
+            ('nested[double-nested][tomato]', 'toe-maw-toe'),
+            ('nested[double-nested][potato]', 'poe-taw-toe')
+        ]
+        actual = self.adapter.restful_params(input)
+        actual.sort()
+        expected.sort()
+        self.assertEqual(actual, expected)
+
+    def test_list_values(self):
+        """should include separate keys for each list value"""
+        input = {'foo': [1, 2, 3, 4, 5]}
+        expected = [('foo[]', 1), ('foo[]', 2), ('foo[]', 3), ('foo[]', 4),
+                ('foo[]', 5)]
+        actual = self.adapter.restful_params(input)
+        actual.sort()
+        expected.sort()
+        self.assertEqual(actual, expected)
+
+    def test_nested_lists(self):
+        input = {'foo': [1, [2, 3], 4]}
+        expected = [('foo[]', 1), ('foo[][]', 2), ('foo[][]', 3), ('foo[]', 4)]
+        actual = self.adapter.restful_params(input)
+        self.assertEqual(actual, expected)
+
+    def test_dicts_inside_lists(self):
+        """should handle dicts nested inside lists"""
+        input = {
+            'animals': [
+                {'name': 'dog', 'sound': 'bark'},
+                {'name': 'duck', 'sound': 'quack'}
+            ]
+        }
+        expected = [
+            ('animals[][name]', 'dog'), ('animals[][sound]', 'bark'),
+            ('animals[][name]', 'duck'), ('animals[][sound]', 'quack')
+        ]
+        actual = self.adapter.restful_params(input)
+        actual.sort()
+        expected.sort()
+        self.assertEqual(actual, expected)
+
+    def test_complex(self):
+        """should handle really complex dicts"""
+        input = {
+            'user': {
+                'id': 12345,
+                'user_name': 'test',
+                'contact': {
+                    'id': 54321,
+                    'first_name': 'joe',
+                    'last_name': 'test',
+                    'emails': [
+                        { 'address': 'joe@test.com', 'type': 'work' },
+                        { 'address': 'joetest@joetest.com', 'type': 'home' },
+                        { 'address': 'donotreply@joetest.com', 'type': 'spam' }
+                    ]
+                },
+                'rights': ['create', 'read', 'update']
+            }
+        }
+        expected = [
+            ('user[id]', 12345),
+            ('user[user_name]', 'test'),
+            ('user[contact][id]', 54321),
+            ('user[contact][first_name]', 'joe'),
+            ('user[contact][last_name]', 'test'),
+            ('user[contact][emails][][address]', 'joe@test.com'),
+            ('user[contact][emails][][type]', 'work'),
+            ('user[contact][emails][][address]', 'joetest@joetest.com'),
+            ('user[contact][emails][][type]', 'home'),
+            ('user[contact][emails][][address]', 'donotreply@joetest.com'),
+            ('user[contact][emails][][type]', 'spam'),
+            ('user[rights][]', 'create'),
+            ('user[rights][]', 'read'),
+            ('user[rights][]', 'update')
+        ]
+        actual = self.adapter.restful_params(input)
+        actual.sort()
+        expected.sort()
+        self.assertEqual(actual, expected)

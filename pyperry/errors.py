@@ -15,3 +15,6 @@ class AmbiguousClassName(Exception):
 
 class PersistenceError(Exception):
     pass
+
+class MalformedResponse(Exception):
+    pass
