@@ -239,7 +239,7 @@ class HasManyTestCase(BaseAssociationTestCase):
         """should set collection to true"""
         self.assertTrue(self.has_many.collection())
 
-class HasManyTestCase(BaseAssociationTestCase):
+class HasOneTestCase(BaseAssociationTestCase):
 
     def setUp(self):
         self.klass = fixtures.association_models.Test
@@ -248,11 +248,11 @@ class HasManyTestCase(BaseAssociationTestCase):
         self.has_one = HasOne(self.klass, self.id)
 
     def test_type(self):
-        """should set type to has_many"""
+        """should set type to has_one"""
         self.assertEqual('has_one', self.has_one.type())
 
     def test_collection(self):
-        """should set collection to true"""
+        """should set collection to false"""
         self.assertFalse(self.has_one.collection())
 
 
