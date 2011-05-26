@@ -167,6 +167,9 @@ class Relation(object):
         """
         Returns the combined dict of all values passed to the modifers method.
         """
+        if hasattr(self, '_modifiers'):
+            return self._modifiers
+
         self._modifiers = {}
         for value in self.params['modifiers']:
             if callable(value):
@@ -176,6 +179,7 @@ class Relation(object):
             except:
                 raise TypeError(
                         'modifier values must evaluate to dict-like objects')
+
         return self._modifiers
 
     def create_singular_method(self, key):

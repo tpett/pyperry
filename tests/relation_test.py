@@ -287,6 +287,14 @@ class ModifiersTestCase(BaseRelationTestCase):
         relation = scoped.mod()
         self.assertEqual(relation.modifiers_value(), {'foo': 'bar'})
 
+    def test_cache_modifiers_value(self):
+        """should cache combined modifiers dict on the first call"""
+        relation = self.relation.modifiers({'foo': 'bar'})
+        self.assertFalse(hasattr(relation, '_modifiers'))
+        relation.modifiers_value()
+        self.assertTrue(hasattr(relation, '_modifiers'))
+        self.assertEqual(relation._modifiers, relation.modifiers_value())
+
 
 ##
 # Test Relation instance delegates defined scopes to its klass
