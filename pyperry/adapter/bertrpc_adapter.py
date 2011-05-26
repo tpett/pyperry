@@ -4,10 +4,13 @@ from pyperry.adapter.abstract_adapter import AbstractAdapter
 class BERTRPC(AbstractAdapter):
     """
     Adapter for accesing data over BERTRPC
+
     Takes these configuration keywords:
+
+        - namespace: the module that the call lives in (required)
+        - procedure: the remote procedure to call (required)
         - base_options: options that will be included with every request
-        - namespace: the module that the call lives in
-        - procedure: the remote procedure to call
+
     """
 
     def read(self, **kwargs):

@@ -148,30 +148,32 @@ class RestfulHttpAdapter(AbstractAdapter):
 
         The best way to understand this format is by example:
 
-        Example input:
-        {
-          'key': 'value',
-          'foo': {
-            'list': [1, 2, 3],
-            'bar': {
-              'double-nested': 'value'
-            }
-          }
-        }
+        Example input::
 
-        Example output:
-        [
-          ('key', 'value'),
-          ('foo[list][]', 1), ('foo[list][]', 2), ('foo[list][]', 3),
-          ('foo[bar][double-nested]', 'value')
-        ]
+            {
+              'key': 'value',
+              'foo': {
+                'list': [1, 2, 3],
+                'bar': {
+                  'double-nested': 'value'
+                }
+              }
+            }
+
+        Example output::
+
+            [
+              ('key', 'value'),
+              ('foo[list][]', 1), ('foo[list][]', 2), ('foo[list][]', 3),
+              ('foo[bar][double-nested]', 'value')
+            ]
 
         When calling the urlencode on the result of this method, you will
         generate a query string similar to the following. The order of the
         parameters may vary except that successive array elements will also
-        be successive in the query string.
+        be successive in the query string::
 
-        'key=value&foo[list][]=1&foo[list][]=2&foo[list][]=3&foo[bar][double-nested]=value'
+            'key=value&foo[list][]=1&foo[list][]=2&foo[list][]=3&foo[bar][double-nested]=value'
 
         """
         restful = self.params_for_dict(params, [], '')

@@ -147,7 +147,44 @@ class Base(object):
     Querying
     ========
 
-    TODO
+    Queries can be built by chaining calls to scopes or query methods.  For
+    example::
+
+        Person.where({ 'first_name': 'Bob' }).order('last_name')
+
+    This generates a query for all Person objects with the first name "Bob"
+    ordered by their last name.  Each query method returns a new L{Relation}
+    object with the new query parameters applied.  This allows the continued
+    chaining.
+
+    A L{Relation} object is a sequence-like object behaving much like a
+    C{list}.  The query will be run the first time the object is treated like a
+    list, and the records will be used for the expression.  For example::
+
+        query = Animal.where({ 'type': 'Platypus' })
+
+        # Array comprehensions and for loops
+        for animal in query:
+            print animal.name + ' is a platypus.  They don't do much.'
+
+        # Compares type and attributes of objects for equality
+        object in query
+        object not in query
+
+        # Indexing, slicing, step slicing
+        query[0]
+        query[0:3]
+        query[0:3:2]
+
+        # Other
+        len(query)
+
+    In this example the query is executed before running the for loop, and all
+    subsequent calls use that result.  Queries will not be run until you need
+    them so unused queries don't hurt performance.  If you would like to force
+    a query to run and retreive the records in a C{list} object use the
+    L{Relation.all()} method, or to receive the object itself in single result
+    queries use the L{Relation.first()} method.
 
     Persistence
     ===========
@@ -801,4 +838,10 @@ class Base(object):
                 self.__class__.__name__,
                 self.attributes,
                 self.new_record)
+
+    def __eq__(self, compare):
+        """Compare equality of an object by its attributes"""
+        return( self.attributes == compare.attributes
+                and type(self) == type(compare) )
+
 

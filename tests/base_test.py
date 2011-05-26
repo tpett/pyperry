@@ -337,6 +337,43 @@ class BaseResolveNameMethodTestCase(BaseTestCase):
         result = pyperry.Base.resolve_name('base_test.Article')
         self.assertEqual(result, [Article])
 
+class BaseComparisonTestCase(BaseTestCase):
+
+    def setUp(self):
+        class Test(pyperry.Base):
+            def _config(cls):
+                cls.attributes('id', 'name')
+
+        class Test2(pyperry.Base):
+            def _config(cls):
+                cls.attributes('id', 'name')
+
+        self.Test = Test
+        self.Test2 = Test2
+
+    def test_object_equal(self):
+        """should compare the same object as equal to itself"""
+        test = self.Test({ 'id': 1, 'name': 'foo' })
+        self.assertEqual(test, test)
+
+    def test_attributes_equal(self):
+        """should compare two differnt objects with the same attributes as equal"""
+        test1 = self.Test({ 'id': 2, 'name': 'Poop Head' })
+        test2 = self.Test({ 'id': 2, 'name': 'Poop Head' })
+        self.assertEqual(test1, test2)
+
+    def test_not_equal(self):
+        """should not be equal when attributes are different"""
+        test1 = self.Test({ 'id': 1, 'name': 'Poop Head' })
+        test2 = self.Test({ 'id': 1, 'name': 'Poop Head!' })
+        self.assertNotEqual(test1, test2)
+
+    def test_not_equal_different_class(self):
+        """should not be equal when different classes"""
+        test1 = self.Test({ 'id': 1, 'name': 'Poop Head' })
+        test2 = self.Test2({ 'id': 1, 'name': 'Poop Head' })
+        self.assertNotEqual(test1, test2)
+
 
 ##
 # Scoping methods
