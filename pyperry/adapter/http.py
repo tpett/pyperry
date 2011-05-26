@@ -21,11 +21,13 @@ class RestfulHttpAdapter(AbstractAdapter):
         """
         relation = kwargs['relation']
         url = self.url_for('GET')
-        params = self.restful_params(relation.query())
-        if len(params) > 0:
-            url += '?' + urllib.urlencode(params)
 
-        http_response, body = self.http_request('GET', url, params, **kwargs)
+        query_string = self.query_string_for(relation)
+        if query_string is not None:
+            url += query_string
+
+
+        http_response, body = self.http_request('GET', url, {}, **kwargs)
         response = self.response(http_response, body)
         records = response.parsed()
         if not isinstance(records, list):
@@ -117,6 +119,22 @@ class RestfulHttpAdapter(AbstractAdapter):
             params.update(model.attributes)
 
         return params
+
+    def query_string_for(self, relation):
+        """
+        Encodes the relation and any query modifiers into a query string
+        suitable for use in a URL. Includes the '?' as part of the query string
+        and returns None if there are no parameters.
+
+        """
+        query = relation.query()
+        mods = relation.modifiers_value()
+        if 'query' in mods:
+            query.update(mods['query'])
+
+        params = self.restful_params(query)
+        if len(params) > 0:
+            return '?' + urllib.urlencode(params)
 
     def config_value(self, option, default=None):
         """

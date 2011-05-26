@@ -175,6 +175,37 @@ class ReadTestCase(HttpAdapterTestCase):
 
         self.assertEqual(query, expected)
 
+    def test_modifiers_in_query(self):
+        """should include query modifiers in the query string"""
+        r = pyperry.Base.scoped().modifiers({
+                'query': {'foo': 'bar'}
+            })
+        self.adapter.read(relation=r)
+        last_request = http_server.last_request()
+        self.assertEqual(last_request['path'], '/foo.json?foo=bar')
+
+    def test_modifiers_and_relation(self):
+        """
+        should include the relation and query modifiers in the query string
+        """
+        r = pyperry.Base.scoped().where({'id': 3}).limit(1).modifiers({
+                'query': {'foo': {'bar': 'baz'}}
+            })
+        self.adapter.read(relation=r)
+
+        expected = 'where[][id]=3&limit=1&foo[bar]=baz'
+        expected = expected.replace('[', '%5B').replace(']', '%5D')
+        expected = expected.split('&')
+        expected.sort()
+
+        last_request = http_server.last_request()
+        query = last_request['path'].split('?')[1]
+        query = query.split('&')
+        query.sort()
+
+        self.assertEqual(query, expected)
+
+
     def test_records(self):
         """should return a list of records retrieved from the response"""
         result = self.adapter.read(relation=pyperry.Base.scoped())
