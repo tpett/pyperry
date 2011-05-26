@@ -69,7 +69,8 @@ class BaseMeta(type):
         relation_delegation = (
                 Relation.singular_query_methods +
                 Relation.plural_query_methods +
-                ['all', 'first'] )
+                ['modifiers', 'all', 'first'] )
+
         if key in relation_delegation:
             return getattr(cls.scoped(), key)
         else:

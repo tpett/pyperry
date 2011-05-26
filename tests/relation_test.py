@@ -184,6 +184,111 @@ class MergeRelationTestCase(BaseRelationTestCase):
         self.assertEqual(merged.params['select'], ['poop'])
 
 ##
+# Test that modifiers behaves almost like a query method
+#
+class ModifiersTestCase(BaseRelationTestCase):
+
+    def test_methods_defined(self):
+        """should define a modifiers and modifiers_value method"""
+        self.assertTrue(hasattr(self.relation, 'modifiers'))
+        self.assertTrue(callable(self.relation.modifiers))
+        self.assertTrue(hasattr(self.relation, 'modifiers_value'))
+        self.assertTrue(callable(self.relation.modifiers_value))
+
+    def test_init(self):
+        """
+        should set a modifiers key in the relation params and initialize it to
+        an empty list
+        """
+        self.assertTrue('modifiers' in self.relation.params)
+        self.assertEqual(self.relation.params['modifiers'], [])
+
+    def test_new_relation(self):
+        """should return a new relation when calling modifiers()"""
+        relation = self.relation.modifiers({})
+        self.assertEqual(type(relation), type(self.relation))
+        self.assertNotEqual(hash(relation), hash(self.relation))
+
+    def test_write_to_params(self):
+        """should store modifiers in the params dict"""
+        relation = self.relation.modifiers({'foo': 'bar'})
+        self.assertEqual(relation.params['modifiers'][0]['foo'], 'bar')
+
+    def test_delegate_to_scoped(self):
+        """should delgate Base.modifiers to Base.scoped.modifiers"""
+        self.assertTrue(hasattr(self.Test, 'modifiers'))
+        self.assertTrue(callable(self.Test.modifiers))
+
+    def test_value_always_dict(self):
+        """modifiers value should always return a dict"""
+        self.assertEqual(self.relation.modifiers_value(), {})
+
+    def test_combine_dicts(self):
+        """should combine all of the dict values into one dict"""
+        relation = (self.relation.modifiers({'foo': 'bar'})
+                                 .modifiers({'biz': 'baz'}))
+        self.assertEqual(relation.modifiers_value(), {
+            'foo': 'bar', 'biz': 'baz'
+        })
+
+    def test_eval_lambdas(self):
+        """should evaluate lambdas when building modifiers_value dict"""
+        relation = self.relation.modifiers(lambda: {'foo': 'bar'})
+        self.assertEqual(relation.modifiers_value(), {'foo': 'bar'})
+
+    def test_raise_when_value_not_dict(self):
+        """should raise if a non-dict value is added to the modifiers"""
+        relation = self.relation.modifiers('eek!')
+        self.assertRaises(TypeError, relation.modifiers_value)
+
+    def test_raise_when_lambda_not_dict(self):
+        """should raise if a lambda value does not return a dict"""
+        relation = self.relation.modifiers(lambda: 'gah!')
+        self.assertRaises(TypeError, relation.modifiers_value)
+
+    def test_reset_when_none(self):
+        """should remove old modifiers if modifiers called with None"""
+        relation = self.relation.modifiers({'foo': 'bar'}).modifiers(None)
+        self.assertEqual(relation.modifiers_value(), {})
+
+    def test_combine_in_order(self):
+        """should combine dict values in the order they were given"""
+        relation = (self.relation.modifiers({'foo': 'bar', 'biz': 'baz'})
+                                 .modifiers({'biz': 'bur', 'dum': 'dum'})
+                                 .modifiers(lambda: {'dum': 'der'}))
+        self.assertEqual(relation.modifiers_value(), {
+            'foo': 'bar', 'biz': 'bur', 'dum': 'der'
+        })
+
+    def test_merge(self):
+        """should include modifiers when merging relation"""
+        r1 = self.relation.modifiers({'foo': 'bar'})
+        r2 = self.relation.merge(r1)
+        self.assertEqual(self.relation.modifiers_value(), {})
+        self.assertEqual(r1.modifiers_value(), {'foo': 'bar'})
+        self.assertEqual(r2.modifiers_value(), {'foo': 'bar'})
+
+    def test_apply_finder_options(self):
+        """should recognize modifiers when applying finder options"""
+        relation = self.relation.apply_finder_options({
+            'modifiers': {'foo': 'bar'}
+        })
+        self.assertEqual(relation.modifiers_value(), {'foo': 'bar'})
+
+    def test_exclude_from_query(self):
+        """should not include modifiers in the query() dict"""
+        relation = self.relation.modifiers({'foo': 'bar'})
+        self.assertFalse('modifiers' in relation.query())
+
+    def test_include_in_scopes(self):
+        """modifiers should be usable in scopes"""
+        self.Test.scope('mod', modifiers={'foo': 'bar'})
+        scoped = self.Test.scoped()
+        relation = scoped.mod()
+        self.assertEqual(relation.modifiers_value(), {'foo': 'bar'})
+
+
+##
 # Test Relation instance delegates defined scopes to its klass
 #
 class RelationDelegatesScopesTestCase(BaseRelationTestCase):

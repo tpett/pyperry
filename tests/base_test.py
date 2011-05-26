@@ -454,7 +454,7 @@ class BaseRelationQueryMethodTestCase(BaseScopingTestCase):
     def test_all_query_methods(self):
         """defined query methods on Relation should be accessible from Base"""
         methods = (pyperry.Relation.singular_query_methods +
-                pyperry.Relation.plural_query_methods)
+                pyperry.Relation.plural_query_methods + ['modifiers'])
 
         for method in methods:
             result = getattr(self.Test, method)

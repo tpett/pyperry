@@ -32,6 +32,7 @@ class Relation(object):
             self.params[method] = None
         for method in self.plural_query_methods:
             self.params[method] = []
+        self.params['modifiers'] = []
 
     # Dynamically create the query methods as they are needed
     def __getattr__(self, key):
@@ -85,7 +86,8 @@ class Relation(object):
         valid_methods = (
                 self.singular_query_methods +
                 self.plural_query_methods +
-                self.aliases.keys() )
+                self.aliases.keys() +
+                ['modifiers'])
 
         for method in set(valid_methods) & set(options.keys()):
             if self.aliases.get(method):
@@ -104,7 +106,11 @@ class Relation(object):
         """Merge given relation onto self returning a new relation"""
         self = self.clone()
 
-        for method in self.singular_query_methods + self.plural_query_methods:
+        query_methods = (self.singular_query_methods +
+                         self.plural_query_methods +
+                         ['modifiers'])
+
+        for method in query_methods:
             value = relation.params[method]
             if value and isinstance(value, list):
                 self = getattr(self, method)(*value)
@@ -134,6 +140,43 @@ class Relation(object):
             self._records = self.klass.fetch_records(self)
         return self._records
     list = fetch_records
+
+    def modifiers(self, value):
+        """
+        A pseudo query method used to store additional data on a relation.
+
+        modifiers expects its value to be either a dict or a lambda that
+        returns a dict. Successive calls to modifiers will 'merge' the values
+        it receives into a single dict. The modifiers method behaves almost
+        identical to a plural query method. You can even use the modifiers
+        method in your scopes. The only difference is that the modifiers value
+        is not included in the dict returned by the query() method. The purpose
+        of having a modifiers query method is to include additional data in the
+        query that may be of interest to middlewares or adapters but is not
+        inherent to the query itself.
+
+        """
+        rel = self.clone()
+        if value is None:
+            rel.params['modifiers'] = []
+        else:
+            rel.params['modifiers'].append(value)
+        return rel
+
+    def modifiers_value(self):
+        """
+        Returns the combined dict of all values passed to the modifers method.
+        """
+        self._modifiers = {}
+        for value in self.params['modifiers']:
+            if callable(value):
+                value = value()
+            try:
+                self._modifiers.update(value)
+            except:
+                raise TypeError(
+                        'modifier values must evaluate to dict-like objects')
+        return self._modifiers
 
     def create_singular_method(self, key):
         """
@@ -181,4 +224,3 @@ class Relation(object):
             return value()
         else:
             return value
-
