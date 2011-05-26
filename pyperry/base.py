@@ -362,8 +362,9 @@ class Base(object):
         """
         if self.frozen():
             raise errors.PersistenceError('cannot save a frozen model')
-        elif self.id is None and not self.new_record:
-            raise errors.PersistenceError('cannot save model without id')
+        elif self.pk_value() is None and not self.new_record:
+            raise errors.PersistenceError(
+                    'cannot save model without a primary key value')
 
         return self.adapter('write')(model=self).success
 
@@ -405,9 +406,9 @@ class Base(object):
             raise errors.PersistenceError('cannot delete a frozen model')
         elif self.new_record:
             raise errors.PersistenceError('cannot delete a new model')
-        elif self.id is None:
+        elif self.pk_value() is None:
             raise errors.PersistenceError(
-                    'cannot delete a model without an id')
+                    'cannot delete a model without a primary key value')
 
         return self.adapter('write')(model=self, mode='delete').success
 
@@ -415,7 +416,8 @@ class Base(object):
     #}
 
     def reload(self):
-        self.attributes = self.scoped().where({'id': 1}).first().attributes
+        pk_condition = {self.pk_attr(): self.pk_value()}
+        self.attributes = self.scoped().where(pk_condition).first().attributes
 
     def frozen(self):
         """Returns True if this instance is frozen and cannot be saved."""

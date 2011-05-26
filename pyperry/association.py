@@ -28,15 +28,16 @@ class Association(object):
     def scope(self):
         raise NotImplementedError, 'You must define scope in subclasses.'
 
-    # Primary key attributes
-    # There is a better way to do the property as a decorator, but it does not
-    # => work in Python2.5
-    def get_primary_key(self):
-        return self.options.get('primary_key') or 'id'
+    def primary_key(self, source_instance=None):
+        pk_option = self.options.get('primary_key')
+        if pk_option is not None:
+            primary_key = pk_option
+        elif isinstance(self, BelongsTo):
+            primary_key = self.target_klass(source_instance).primary_key()
+        else:
+            primary_key = self.source_klass.primary_key()
 
-    def set_primary_key(self, value):
-        self.options['primary_key'] = value
-    primary_key = property(get_primary_key, set_primary_key)
+        return primary_key
 
     # Foreign key attributes
     def get_foreign_key(self):
@@ -140,8 +141,6 @@ class BelongsTo(Association):
     def polymorphic_type(self):
         return '%s_type' % self.id
 
-    ##
-    #
     def scope(self, obj):
         """
         Returns a scope on the target containing this association
@@ -158,8 +157,9 @@ class BelongsTo(Association):
 
         """
         if hasattr(obj, self.foreign_key) and obj[self.foreign_key]:
-            return self._base_scope(obj).where({ self.primary_key:
-                obj[self.foreign_key] })
+            return self._base_scope(obj).where({
+                self.primary_key(): obj[self.foreign_key]
+            })
 
 class Has(Association):
 
@@ -203,12 +203,15 @@ class Has(Association):
             source.class))
 
         """
-        if hasattr(obj, self.primary_key) and obj[self.primary_key]:
-            scope = self._base_scope(obj).where({ self.foreign_key:
-                obj[self.primary_key] })
+        pk_attr = self.primary_key()
+        if hasattr(obj, pk_attr) and obj[pk_attr]:
+            scope = self._base_scope(obj).where({
+                self.foreign_key: obj[pk_attr]
+            })
             if self.polymorphic():
-                scope = scope.where({ self.polymorphic_type():
-                    obj.__class__.__name__ })
+                scope = scope.where({
+                    self.polymorphic_type(): obj.__class__.__name__
+                })
             return scope
 
 class HasMany(Has):
