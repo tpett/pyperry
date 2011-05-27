@@ -42,6 +42,9 @@ class BaseMeta(type):
         else:
             new.adapter_config = {}
 
+        # Create a default primary_key value
+        new._primary_key = 'id'
+
         # Create fresh adapter dict
         new._adapters = {}
 
@@ -321,6 +324,20 @@ class Base(object):
             self[key] = value
         else:
             object.__setattr__(self, key, value)
+
+    def pk_attr(self):
+        """
+        A shortcut method from retrieving the name of this model's primary key
+        attribute.
+        """
+        return self.primary_key()
+
+    def pk_value(self):
+        """
+        A shortcut method for retrieving the value stored in this model's
+        primary key attribute.
+        """
+        return getattr(self, self.primary_key())
     #}
 
     #{ Persistence
@@ -346,8 +363,9 @@ class Base(object):
         """
         if self.frozen():
             raise errors.PersistenceError('cannot save a frozen model')
-        elif self.id is None and not self.new_record:
-            raise errors.PersistenceError('cannot save model without id')
+        elif self.pk_value() is None and not self.new_record:
+            raise errors.PersistenceError(
+                    'cannot save model without a primary key value')
 
         return self.adapter('write')(model=self).success
 
@@ -389,9 +407,9 @@ class Base(object):
             raise errors.PersistenceError('cannot delete a frozen model')
         elif self.new_record:
             raise errors.PersistenceError('cannot delete a new model')
-        elif self.id is None:
+        elif self.pk_value() is None:
             raise errors.PersistenceError(
-                    'cannot delete a model without an id')
+                    'cannot delete a model without a primary key value')
 
         return self.adapter('write')(model=self, mode='delete').success
 
@@ -399,7 +417,8 @@ class Base(object):
     #}
 
     def reload(self):
-        self.attributes = self.scoped().where({'id': 1}).first().attributes
+        pk_condition = {self.pk_attr(): self.pk_value()}
+        self.attributes = self.scoped().where(pk_condition).first().attributes
 
     def frozen(self):
         """Returns True if this instance is frozen and cannot be saved."""
@@ -511,6 +530,25 @@ class Base(object):
             attributes = attributes[0]
         cls.defined_attributes |= set(attributes)
     attributes = define_attributes
+
+    @classmethod
+    def primary_key(cls):
+        """
+        Returns the attribute name of the model's primary key.
+        """
+        return cls._primary_key
+
+    @classmethod
+    def set_primary_key(cls, attr_name):
+        """
+        Set the name of the primary key attribute for the model. The new
+        primary key attribute must be one of the definted attributes otherwise
+        set_primary_key will raise an AttributeError.
+        """
+        if attr_name not in cls.defined_attributes:
+            raise AttributeError(
+                    'an attribute must be defined to make it the primary key')
+        cls._primary_key = attr_name
     #}
 
     @classmethod

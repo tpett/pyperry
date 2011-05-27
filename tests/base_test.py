@@ -44,6 +44,7 @@ class DefineAttributesTestCase(BaseTestCase):
 
         self.assertEqual(Test.defined_attributes, set(['id', 'name', 'poop']))
 
+
 ##
 # Test the initializer
 #
@@ -81,6 +82,54 @@ class InitializeTestCase(BaseTestCase):
         """init should set the errors attribute to any empty dict"""
         t = self.Test({})
         self.assertEqual(t.errors, {})
+
+
+##
+# Configurable primary keys
+#
+class PrimaryKeyTestCase(BaseTestCase):
+
+    def setUp(self):
+        class Model(pyperry.Base):
+            def _config(c):
+                c.attributes('id', 'foo')
+        self.Model = Model
+
+    def test_primary_key_class_methods(self):
+        """primary_key and set_primary_key methods should be defined on Base"""
+        self.assertTrue(hasattr(self.Model, 'primary_key'))
+        self.assertTrue(callable(self.Model.primary_key))
+        self.assertTrue(hasattr(self.Model, 'set_primary_key'))
+        self.assertTrue(callable(self.Model.set_primary_key))
+
+    def test_defaults_to_id(self):
+        """the primary_key method should return 'id' by default"""
+        self.assertEqual(self.Model.primary_key(), 'id')
+
+    def test_set_primary_key_class_method(self):
+        """should change the primary_key with the set_primary_key method"""
+        self.Model.set_primary_key('foo')
+        self.assertEqual(self.Model.primary_key(), 'foo')
+
+    def test_raise_if_no_attr(self):
+        """should raise if setting primary key to an undefined attribute"""
+        self.assertRaises(AttributeError, self.Model.set_primary_key, 'asdf')
+
+    def test_pk_attr_shortcut_method(self):
+        """should access the primary key attribute name from an instance"""
+        m = self.Model({})
+        self.assertEqual(m.pk_attr(), 'id')
+        self.Model.set_primary_key('foo')
+        self.assertEqual(m.pk_attr(), 'foo')
+
+    def test_pk_value_shortcut_method(self):
+        """should access the primary key attribute value from the instance"""
+        m = self.Model({'id': 6, 'foo': 'bar'})
+        self.assertEqual(m.pk_value(), 6)
+        self.Model.set_primary_key('foo')
+        self.assertEqual(m.pk_value(), 'bar')
+        m.foo = 'asdf'
+        self.assertEqual(m.pk_value(), 'asdf')
 
 
 ##

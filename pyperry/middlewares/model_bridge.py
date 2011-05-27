@@ -49,7 +49,8 @@ class ModelBridge(object):
             has_read_adapter = False
 
         if model.new_record and has_read_adapter:
-            model.id = response.model_attributes()['id']
+            setattr(model, model.pk_attr(),
+                    response.model_attributes()[model.pk_attr()])
 
         if has_read_adapter:
             model.reload()

@@ -92,8 +92,8 @@ class RestfulHttpAdapter(AbstractAdapter):
         self.config_value('service')
 
         service = self.config.service
-        primary_key = self.config_value('primary_key', 'id')
         if model is not None:
+            primary_key = self.config_value('primary_key', model.pk_attr())
             pk_value = getattr(model, primary_key)
         format = self.config_value('format', 'json')
 

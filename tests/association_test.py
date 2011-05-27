@@ -46,15 +46,6 @@ class GenericAssociationTestCase(BaseAssociationTestCase):
         """should raise a NotImplementedError on scope"""
         self.assertRaises(NotImplementedError, self.association.scope)
 
-    def test_primary_key_returns_id(self):
-        """should return 'id' if no primary_key was passed as a kwarg"""
-        self.assertEqual('id', self.association.primary_key)
-
-    def test_primary_key_returns_primary_key(self):
-        """should return the primary_key if one was passed"""
-        self.association.primary_key = self.primary_key
-        self.assertEqual(self.primary_key, self.association.primary_key)
-
     def test_foreign_key_returns_None(self):
         """should return None when no foreign_key was passed"""
         self.assertEqual(None, self.association.foreign_key)
@@ -191,7 +182,7 @@ class HasTestCase(BaseAssociationTestCase):
 
     def test_primary_key(self):
         """should use 'id' as default primary key"""
-        self.assertEqual('id', self.has.primary_key)
+        self.assertEqual('id', self.has.primary_key())
 
     # Need to test polymorphic stuff
     def test_polymorphic(self):
@@ -248,7 +239,7 @@ class HasManyTestCase(BaseAssociationTestCase):
         """should set collection to true"""
         self.assertTrue(self.has_many.collection())
 
-class HasManyTestCase(BaseAssociationTestCase):
+class HasOneTestCase(BaseAssociationTestCase):
 
     def setUp(self):
         self.klass = fixtures.association_models.Test
@@ -257,9 +248,70 @@ class HasManyTestCase(BaseAssociationTestCase):
         self.has_one = HasOne(self.klass, self.id)
 
     def test_type(self):
-        """should set type to has_many"""
+        """should set type to has_one"""
         self.assertEqual('has_one', self.has_one.type())
 
     def test_collection(self):
-        """should set collection to true"""
+        """should set collection to false"""
         self.assertFalse(self.has_one.collection())
+
+
+
+class SourceModel(pyperry.Base):
+    def _config(c):
+        c.attributes('id', 'foo', 'whatever_type')
+        c.set_primary_key('foo')
+
+class TargetModel(pyperry.Base):
+    def _config(c):
+        c.attributes('id', 'bar')
+        c.set_primary_key('bar')
+
+class PrimaryKeyTestCase(BaseAssociationTestCase):
+
+    def test_default(self):
+        """
+        should return source class's primary key if no primary_key was passed
+        as a kwarg
+        """
+        association = Association(SourceModel, 'whatever')
+        self.assertEqual(SourceModel.primary_key(), association.primary_key())
+
+    def test_kwarg(self):
+        """should use the primary key given in the kwargs"""
+        association = BelongsTo(SourceModel, 'whatever', primary_key='asdf')
+        self.assertEqual(association.primary_key(), 'asdf')
+        association = Has(SourceModel, 'whatever', primary_key='asdf')
+        self.assertEqual(association.primary_key(), 'asdf')
+
+    def test_belongs_to(self):
+        """
+        should use the target class's primary key in a belongs to association
+        """
+        association = BelongsTo(SourceModel, 'whatever',
+                                class_name='TargetModel')
+        self.assertEqual(association.primary_key(), TargetModel.primary_key())
+
+    def test_polymorphic_belongs_to(self):
+        """
+        should use the target class's primary key in a polymorphic belongs to
+        association
+        """
+        association = BelongsTo(SourceModel, 'whatever', polymorphic=True)
+        source_instance = SourceModel({'whatever_type': 'TargetModel'})
+        self.assertEqual(association.primary_key(source_instance),
+                         TargetModel.primary_key())
+
+    def test_has_one(self):
+        """
+        should use the source class's primary key in a has one association
+        """
+        association = HasOne(SourceModel, 'whatever', class_name='TargetModel')
+        self.assertEqual(association.primary_key(), SourceModel.primary_key())
+
+    def test_has_many(self):
+        """
+        should use the source class's primary key in a has many association
+        """
+        association = HasMany(SourceModel, 'whatever', class_name='TargetModel')
+        self.assertEqual(association.primary_key(), SourceModel.primary_key())
