@@ -824,7 +824,7 @@ class Base(object):
         class.
         @keyword primary_key: Primary key of source model (default: primary key
         of source model)
-        @keyword foreign_key: Foreign key of this model (default: id + '_id')
+        @keyword foreign_key: Foreign key of the target model (default: id + '_id')
         @keyword polymorphic: Set to True if this is a polymorphic association.
         Class name will be looked for in the (id + '_type') field. (default:
         False)
@@ -856,9 +856,9 @@ class Base(object):
         (required).
         @keyword klass: Can be used in place of C{class_name} -- the source
         class.
-        @keyword primary_key: Primary key of source model (default: primary key
-        of source model)
-        @keyword foreign_key: Foreign key of this model (default: id + '_id')
+        @keyword primary_key: Primary key of target model (default: primary key
+        of target model)
+        @keyword foreign_key: Foreign key on the source model (default: id + '_id')
         @keyword as_: When source is polymorphic this will specify the class
         name to use (required when source is polymorphic).
         @return: None
@@ -885,9 +885,9 @@ class Base(object):
         (required).
         @keyword klass: Can be used in place of C{class_name} -- the source
         class.
-        @keyword primary_key: Primary key of source model (default: primary key
-        of source model)
-        @keyword foreign_key: Foreign key of this model (default: id + '_id')
+        @keyword primary_key: Primary key of target model (default: primary key
+        of target model)
+        @keyword foreign_key: Foreign key on the source model (default: id + '_id')
         @keyword as_: When source is polymorphic this will specify the class
         name to use (required when source is polymorphic).
         @return: None

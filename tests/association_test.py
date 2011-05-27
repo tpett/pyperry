@@ -21,12 +21,12 @@ class GenericAssociationTestCase(BaseAssociationTestCase):
         self.args = { 'foo': 'bar' }
         self.primary_key = 'primary_key'
         self.foreign_key = 'foreign_key'
-        self.target_class = fixtures.association_models.Target
+        self.source_class = fixtures.association_models.Source
         self.association = Association(self.klass, self.id, **self.args)
 
     def test_initialize(self):
         """should take klass, id, and kwarg arguments on initialize"""
-        self.assertEqual(self.klass, self.association.source_klass)
+        self.assertEqual(self.klass, self.association.target_klass)
         self.assertEqual(self.id, self.association.id)
         self.assertEqual(self.args, self.association.options)
 
@@ -68,12 +68,12 @@ class GenericAssociationTestCase(BaseAssociationTestCase):
                 option: lambda x: {}
             }).eager_loadable())
 
-    def test_target_klass(self):
+    def test_source_klass(self):
         """should return the class that is passed in the options"""
-        self.association.options['klass'] = self.target_class
-        self.assertEqual(self.target_class, self.association.target_klass())
+        self.association.options['klass'] = self.source_class
+        self.assertEqual(self.source_class, self.association.source_klass())
 
-class TargetClassTestCase(BaseAssociationTestCase):
+class SourceClassTestCase(BaseAssociationTestCase):
 
     def setUp(self):
         self.site = fixtures.association_models.Site
@@ -84,23 +84,23 @@ class TargetClassTestCase(BaseAssociationTestCase):
 
     def test_klass(self):
         """should return the class specified by :class_name option"""
-        self.assertEqual(self.site, self.article.defined_associations['site'].target_klass())
+        self.assertEqual(self.site, self.article.defined_associations['site'].source_klass())
 
     def test_namespace(self):
         """should return the class in the proper namespace"""
-        self.assertEqual(self.person, self.company.defined_associations['employees'].target_klass())
+        self.assertEqual(self.person, self.company.defined_associations['employees'].source_klass())
 
     # need to test polymorphic
     def test_polymorphic(self):
         """should use the optional object parameter's polymorphic _type
         attribute to determine the class if polymorphic is true"""
         comment = self.comment({'parent_type': "Site"})
-        self.assertEqual(self.site, comment.__class__.defined_associations['parent'].target_klass(comment))
+        self.assertEqual(self.site, comment.__class__.defined_associations['parent'].source_klass(comment))
 
     def test_malicious_values(self):
         """should sanitize malicious values in _type column"""
         comment = self.comment({'parent_type': 'Site.UHOH = True'})
-        comment.__class__.defined_associations['parent'].target_klass(comment)
+        comment.__class__.defined_associations['parent'].source_klass(comment)
         try:
             UHOH
         except NameError:
@@ -112,7 +112,7 @@ class TargetClassTestCase(BaseAssociationTestCase):
         """should raise ModelNotDefined for missing types"""
         comment = self.comment({'parent_type': 'OhSnap'})
         self.assertRaises(errors.ModelNotDefined,
-            comment.__class__.defined_associations['parent'].target_klass, comment)
+            comment.__class__.defined_associations['parent'].source_klass, comment)
 
 class BelongsToTestCase(BaseAssociationTestCase):
 
@@ -159,8 +159,8 @@ class BelongsToTestCase(BaseAssociationTestCase):
         record = self.article({})
         self.assertEqual(None, self.article.defined_associations['site'].scope(record))
 
-    def test_scope_for_target_class(self):
-        """should return a scope for the target class if association present"""
+    def test_scope_for_source_class(self):
+        """should return a scope for the source class if association present"""
         record = self.article({'site_id': 1})
         self.assertTrue(self.article.defined_associations['site'].scope(record).__class__ is Relation)
 
@@ -191,7 +191,7 @@ class HasTestCase(BaseAssociationTestCase):
         self.assertTrue(Has(self.klass, 'bar', _as='parent').polymorphic())
 
     def test_foreign_key(self):
-        """should return the lowercase source class name followed by _id if association is not polymorphic"""
+        """should return the lowercase target class name followed by _id if association is not polymorphic"""
         articles = self.site.defined_associations['articles']
         self.assertEqual('site_id', articles.foreign_key)
 
@@ -206,8 +206,8 @@ class HasTestCase(BaseAssociationTestCase):
         record = self.article({})
         self.assertEqual(None, self.article.defined_associations['comments'].scope(record))
 
-    def test_scope_for_target_class(self):
-        """should return a scope for the target class if association present"""
+    def test_scope_for_source_class(self):
+        """should return a scope for the source class if association present"""
         record = self.article({'id': 1})
         self.assertTrue(self.article.defined_associations['comments'].scope(record).__class__ is Relation)
 
@@ -257,12 +257,12 @@ class HasOneTestCase(BaseAssociationTestCase):
 
 
 
-class SourceModel(pyperry.Base):
+class TargetModel(pyperry.Base):
     def _config(c):
         c.attributes('id', 'foo', 'whatever_type')
         c.set_primary_key('foo')
 
-class TargetModel(pyperry.Base):
+class SourceModel(pyperry.Base):
     def _config(c):
         c.attributes('id', 'bar')
         c.set_primary_key('bar')
@@ -271,47 +271,47 @@ class PrimaryKeyTestCase(BaseAssociationTestCase):
 
     def test_default(self):
         """
-        should return source class's primary key if no primary_key was passed
+        should return target class's primary key if no primary_key was passed
         as a kwarg
         """
-        association = Association(SourceModel, 'whatever')
-        self.assertEqual(SourceModel.primary_key(), association.primary_key())
+        association = Association(TargetModel, 'whatever')
+        self.assertEqual(TargetModel.primary_key(), association.primary_key())
 
     def test_kwarg(self):
         """should use the primary key given in the kwargs"""
-        association = BelongsTo(SourceModel, 'whatever', primary_key='asdf')
+        association = BelongsTo(TargetModel, 'whatever', primary_key='asdf')
         self.assertEqual(association.primary_key(), 'asdf')
-        association = Has(SourceModel, 'whatever', primary_key='asdf')
+        association = Has(TargetModel, 'whatever', primary_key='asdf')
         self.assertEqual(association.primary_key(), 'asdf')
 
     def test_belongs_to(self):
         """
-        should use the target class's primary key in a belongs to association
+        should use the source class's primary key in a belongs to association
         """
-        association = BelongsTo(SourceModel, 'whatever',
-                                class_name='TargetModel')
-        self.assertEqual(association.primary_key(), TargetModel.primary_key())
+        association = BelongsTo(TargetModel, 'whatever',
+                                class_name='SourceModel')
+        self.assertEqual(association.primary_key(), SourceModel.primary_key())
 
     def test_polymorphic_belongs_to(self):
         """
-        should use the target class's primary key in a polymorphic belongs to
+        should use the source class's primary key in a polymorphic belongs to
         association
         """
-        association = BelongsTo(SourceModel, 'whatever', polymorphic=True)
-        source_instance = SourceModel({'whatever_type': 'TargetModel'})
-        self.assertEqual(association.primary_key(source_instance),
-                         TargetModel.primary_key())
+        association = BelongsTo(TargetModel, 'whatever', polymorphic=True)
+        target_instance = TargetModel({'whatever_type': 'SourceModel'})
+        self.assertEqual(association.primary_key(target_instance),
+                         SourceModel.primary_key())
 
     def test_has_one(self):
         """
-        should use the source class's primary key in a has one association
+        should use the target class's primary key in a has one association
         """
-        association = HasOne(SourceModel, 'whatever', class_name='TargetModel')
-        self.assertEqual(association.primary_key(), SourceModel.primary_key())
+        association = HasOne(TargetModel, 'whatever', class_name='SourceModel')
+        self.assertEqual(association.primary_key(), TargetModel.primary_key())
 
     def test_has_many(self):
         """
-        should use the source class's primary key in a has many association
+        should use the target class's primary key in a has many association
         """
-        association = HasMany(SourceModel, 'whatever', class_name='TargetModel')
-        self.assertEqual(association.primary_key(), SourceModel.primary_key())
+        association = HasMany(TargetModel, 'whatever', class_name='SourceModel')
+        self.assertEqual(association.primary_key(), TargetModel.primary_key())

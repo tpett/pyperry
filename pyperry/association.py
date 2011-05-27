@@ -4,9 +4,74 @@ from pyperry import errors
 from pyperry.relation import Relation
 
 class Association(object):
+    """
+    Associations allow you to retrieve a model or collection of models that are
+    related to one another in some way. Here we are concerned with how
+    associations are defined and implemented. For documentation on how to use
+    associations in your models, please see the belongs_to, has_one, and
+    has_many methods on pyperry.Base.
 
-    def __init__(self, source_klass, id, **kwargs):
-        self.source_klass = source_klass
+    To understand how associations work, we must define the concepts of a
+    source class and a target class for an association.
+
+    target class - the class on which you define the association
+    source class - the class of the records returned by calling the association
+                   method on the target class
+
+    An example showing the difference between source and target classes::
+
+        class Car(pyperry.Base): pass
+        class Part(pyperry.Base): pass
+
+        # Car is the target class and Part is the source class
+        Car.has_many('parts', class_name='Part')
+
+        # Part is the target class and Car is the source class
+        Part.belongs_to('car', class_name='Car')
+
+        c = Car.first()
+        # returns a collection of Part instances (Part is the source class)
+        c.parts()
+
+        p = Part().first()
+        # returns an instance of Car (Car is the source class)
+        p.car()
+
+    Now let's look at what happens when you define an association on a model.
+    We will use the association Car.has_many('parts', class_name='Part') as an
+    example because all associations work in the same general way. In this
+    example, a HasMany class (an Association subclass) is instantiated where
+    Car is given as the target_klass argument, and 'parts' is given as the id
+    argument. Because we passed in 'Part' for the class_name option, it is used
+    as the source class for this association.
+
+    The association id is used to name association method that gets defined on
+    the target class. So in our example, all Car instances now have a parts()
+    method they can call to retrieve a collection of parts for that car. When
+    you call the association method on the target class, a relation (or scope)
+    is constructed for the source class representing all of the records related
+    to the target class. For associations that represent collections, such as
+    has_many, a relation is returned that you can further modify. For
+    associations that represent a single object, such as belongs_to or has_one,
+    an instance of that model is returned.
+
+    In summarry, all associations do is create scopes on source classes that
+    represent records from the source class that are related to (or associated
+    with) a target class. Then this scope is packaged as a convenient, easy to
+    use, easy to remember method on the target class.
+
+    This means that calling car.parts() is just returning a scope like::
+
+        Part.scoped().where({'car_id': car.id})
+
+    Similarly, calling part.car() is just returning a scope like::
+
+        Car.scoped().where({'id': part.car_id}).first()
+
+    """
+
+    def __init__(self, target_klass, id, **kwargs):
+        self.target_klass = target_klass
         self.id = id
         self.options = kwargs
 
@@ -28,14 +93,14 @@ class Association(object):
     def scope(self):
         raise NotImplementedError, 'You must define scope in subclasses.'
 
-    def primary_key(self, source_instance=None):
+    def primary_key(self, target_instance=None):
         pk_option = self.options.get('primary_key')
         if pk_option is not None:
             primary_key = pk_option
         elif isinstance(self, BelongsTo):
-            primary_key = self.target_klass(source_instance).primary_key()
+            primary_key = self.source_klass(target_instance).primary_key()
         else:
-            primary_key = self.source_klass.primary_key()
+            primary_key = self.target_klass.primary_key()
 
         return primary_key
 
@@ -59,7 +124,7 @@ class Association(object):
             Relation.aliases.keys())
 
 
-    def target_klass(self, obj=None):
+    def source_klass(self, obj=None):
         poly_type = None
         if (self.options.has_key('polymorphic') and
             self.options['polymorphic'] and obj):
@@ -92,7 +157,7 @@ class Association(object):
                 return self._get_resolved_class(type_string)
 
     def _get_resolved_class(self, string):
-        class_name = self.source_klass.resolve_name(string)
+        class_name = self.target_klass.resolve_name(string)
         if not class_name:
             raise errors.ModelNotDefined, 'Model %s is not defined.' % (string)
         elif len(class_name) > 1:
@@ -102,7 +167,7 @@ class Association(object):
         return class_name[0]
 
     def _base_scope(self, obj):
-        return self.target_klass(obj).scoped().apply_finder_options(
+        return self.source_klass(obj).scoped().apply_finder_options(
             self._base_finder_options(obj))
 
     def _base_finder_options(self, obj):
@@ -143,7 +208,7 @@ class BelongsTo(Association):
 
     def scope(self, obj):
         """
-        Returns a scope on the target containing this association
+        Returns a scope on the source class containing this association
 
         Builds conditions on top of the base_scope generated from any finder
         options set with the association::
@@ -153,7 +218,7 @@ class BelongsTo(Association):
         In addition to any finder options included with the association options
         the following scope will be added::
 
-            where('id = %s' % source['foo_id'])
+            where('id = %s' % target['foo_id'])
 
         """
         if hasattr(obj, self.foreign_key) and obj[self.foreign_key]:
@@ -170,7 +235,7 @@ class Has(Association):
         elif self.polymorphic():
             return '%s_id' % self.options['_as']
         else:
-            return '%s_id' % self.source_klass.__name__.lower()
+            return '%s_id' % self.target_klass.__name__.lower()
 
     def set_foreign_key(self, value):
         self.options['foreign_key'] = value
@@ -184,7 +249,7 @@ class Has(Association):
 
     def scope(self, obj):
         """
-        Returns a scope on the target containing this association
+        Returns a scope on the source class containing this association
 
         Builds conditions on top of the base_scope generated from any finder
         options set with the association::
@@ -195,12 +260,12 @@ class Has(Association):
         In addition to any finder options included with the association options
         the following will be added::
 
-            where('widget_id = %s ' % source['id'])
+            where('widget_id = %s ' % target['id'])
 
         Or for the polymorphic :comments association::
 
-            where('parent_id = %s AND parent_type = %s' % (source['id'],
-            source.class))
+            where('parent_id = %s AND parent_type = %s' % (target['id'],
+            target.class))
 
         """
         pk_attr = self.primary_key()

@@ -5,7 +5,7 @@ class Test(pyperry.Base):
     def _config(c):
         c.attributes('id')
 
-class Target(pyperry.Base):
+class Source(pyperry.Base):
     def _config(c):
         c.attributes('id')
 
