@@ -6,6 +6,7 @@ import stat
 import signal
 import atexit
 import pickle
+import httplib
 from time import sleep
 from BaseHTTPServer import BaseHTTPRequestHandler
 from SocketServer import TCPServer
@@ -48,8 +49,25 @@ def spawn(port=8888):
     else: # in parent process
         server_pid = pid
         atexit.register(kill)
-        sleep(0.5)
+        wait_for_server_to_start(5, 1, port)
         return server_pid
+
+def wait_for_server_to_start(retries, poll_interval, port):
+    if retries == 0:
+        msg = '\nHTTP test server taking too long to start - aborting test!'
+        print >> sys.stderr, msg
+        kill()
+        os._exit(1)
+
+    c = httplib.HTTPConnection('localhost:' + str(port))
+    try:
+        c.connect()
+    except:
+        sleep(poll_interval)
+        wait_for_server_to_start(retries - 1, poll_interval, port)
+    else:
+        c.close()
+
 
 def run_server(port=8888):
     # Prevents server output from showing up in our test runner output.
