@@ -169,7 +169,7 @@ class Base(object):
 
         # Array comprehensions and for loops
         for animal in query:
-            print animal.name + ' is a platypus.  They don't do much.'
+            print animal.name + " is a platypus.  They don't do much."
 
         # Compares type and attributes of objects for equality
         object in query
@@ -193,17 +193,81 @@ class Base(object):
     Persistence
     ===========
 
-    TODO
+    Pyperry provides an interface for creating, updating, and deleting models
+    when a write adapter is configured.  A model can be initialized as a "new"
+    record (default) or a "stored" record and is determined by the
+    C{new_record} attribute.  This changes the behavior of the save operation.
+    A "new" record is created and a "stored" record is updated.  Also, a "new"
+    record cannot be deleted as it does not yet exist in the database.  See the
+    individual persistence methods for more information
 
     Scopes
     ======
 
-    TODO
+    Scopes allow you to specify prebuilt views of your data.  Scopes, like
+    query methods, can be applied simply by chaining calls on instances of
+    L{Relation} or the L{Base} class.  Scopes are created through the
+    L{scope()} class method (conventionally within the _config method)::
+
+        cls.scope('ordered', order='type, name')
+        cls.scope('platypus', where={ 'type': 'platypus' })
+        cls.scope('perrys', where={ 'name': 'perry' })
+        cls.scope('agentp', cls.perrys().platypus())
+
+    These scopes can now be used in queries along with query methods and
+    chained together to make powerful queries::
+
+        # Ordered animals with type 'platypus' named 'perry'
+        Animal.ordered().agentp()
+
+    Scopes can also accept arguments by defining a lambda or function to be
+    called when the scope is invoked::
+
+        @cls.scope
+        def name_is(rel, name):
+            return rel.where({ 'name': name })
+
+        # This can also be written:
+        cls.scope('name_is', lambda(rel, name): rel.where({ 'name': name }))
+
+        # This allows:
+        Animal.name_is('perry')
+
 
     Associations
     ============
 
-    TODO
+    Associations allow you to define foreign key relationships between two
+    models, the target (model on which the association is defined) and the
+    source (model from which the data will come).  There are two basic kinds of
+    associations:  has and belongs.  A has relationship means the foreign_key
+    lives on the source model.  A belongs relationship means the foreign_key
+    lives on target model.
+
+    Imagine a blog.  A blog has many articles and an article belongs to an
+    author.  You might model this structure with Blog, Article and Person
+    classes.  Associations are conventionally defined in the C{_config} method
+    for each class, but to save space we'll just show the association
+    definition for each class::
+
+        Blog.has_many('articles', class_name='Article')
+        Article.belongs_to('blog', class_name='Blog')
+        Article.belongs_to('author', class_name='Person')
+
+    Assuming you have an instance of C{Blog} called C{blog} you could then
+    reference these associations like this::
+
+        # An ordered list of articles on this blog
+        articles = blog.authors().ordered()
+        # The author of the first article
+        articles[0].author()
+
+    Note that the L{has_many} association returns a L{Relation} object allowing
+    you to apply query methods and scopes to the association before executing
+    the query.
+
+    For more information on Associations see the individual Association
+    methods.
 
     """
 
