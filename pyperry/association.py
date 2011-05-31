@@ -295,4 +295,65 @@ class HasOne(Has):
     def collection(self):
         return False
 
+class HasManyThrough(Has):
 
+    def type(self):
+        return 'has_many_through'
+
+    def collection(self):
+        return True
+
+    def polymorphic(self):
+        return False
+
+    def proxy_association(self):
+        if not hasattr(self, '_proxy_association'):
+            through = self.options.get('through')
+            proxy = self.target_klass.defined_associations.get(through)
+            if not proxy: raise errors.AssociationNotFound(
+                    "has_many_through: '%s' is not an association on %s" % (
+                    str(through), str(self.target_klass)))
+            self._proxy_association = proxy
+        return self._proxy_association
+
+    def source_association(self):
+        if not hasattr(self, '_source_association'):
+            source = self.proxy_association().source_klass()
+            source_option = self.options.get('source')
+            association = (source.defined_associations.get(self.id) or
+                           source.defined_associations.get(source_option))
+            if not association: raise errors.AssociationNotFound(
+                    "has_many_through: '%s' is not an association on %s" % (
+                    str(source_option or self.id), str(source)))
+            self._source_association = association
+        return self._source_association
+
+    def source_klass(self):
+        source_type = self.options.get('source_type')
+        return self.source_association().source_klass(source_type)
+
+    def scope(self, obj):
+        source = self.source_association()
+        proxy = self.proxy_association()
+        key_attr = (source.foreign_key if source.type() == 'belongs_to' else
+                    proxy.primary_key()) # TODO: hmm... source or proxy?
+
+        proxy_ids = (lambda: [getattr(x, key_attr) for x in proxy.scope(obj)])
+
+        relation = self.source_klass().scoped()
+        if source.type() == 'belongs_to':
+            source_type_option = self.options.get('source_type')
+            relation = relation.where(lambda: {
+                source.primary_key(source_type_option): proxy_ids()
+            })
+        else:
+            relation = relation.where(lambda: {
+                source.foreign_key: proxy_ids()
+            })
+            if source.polymorphic():
+                proxy_source = proxy.source_klass(obj)
+                poly_type_attr = source.polymorphic_type()
+                poly_type_name = proxy_source.__name__
+                relation = relation.where({ poly_type_attr: poly_type_name })
+
+        return relation

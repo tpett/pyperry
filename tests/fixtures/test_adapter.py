@@ -15,7 +15,11 @@ class TestAdapter(AbstractAdapter):
 
     def read(self, **kwargs):
         self.calls.append(kwargs['relation'].query())
-        return [ self.data for i in range(self.count) ]
+        if self.data is not None and not hasattr(self.data, 'keys'):
+            result = self.data
+        else:
+            result = [ self.data for i in range(self.count) ]
+        return result
 
     def write(self, **kwargs):
         self.calls.append(('write', deepcopy(kwargs)))

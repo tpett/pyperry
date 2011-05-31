@@ -18,3 +18,6 @@ class PersistenceError(Exception):
 
 class MalformedResponse(Exception):
     pass
+
+class AssociationNotFound(Exception):
+    pass

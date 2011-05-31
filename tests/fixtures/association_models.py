@@ -37,6 +37,7 @@ class Site(AssocTest):
                     parent_type = "Site" AND parent_id = %s
             """ % s.id
         )
+        c.has_many('article_comments', through='articles', source='comments')
 
 class Article(AssocTest):
     def _config(c):
@@ -46,12 +47,14 @@ class Article(AssocTest):
         c.has_many('comments', _as='parent', class_name='Comment')
         c.has_many('awesome_comments', _as='parent', class_name='Comment',
             conditions="text LIKE '%awesome%'")
+        c.has_many('comment_authors', through='comments', source='author')
 
 class Comment(AssocTest):
     def _config(c):
         c.attributes('id', 'person_id', 'parent_id', 'parent_type', 'text')
         c.belongs_to('parent', polymorphic=True)
-        c.belongs_to('author', class_name='Person', foreign_key='person_id')
+        c.belongs_to('author', class_name='Person', foreign_key='person_id',
+                     namespace='tests.fixtures.association_models')
 
 class Person(AssocTest):
     def _config(c):
@@ -62,6 +65,8 @@ class Person(AssocTest):
         c.has_many('comments', _as='parent', class_name='Comment')
         c.has_many('employees', class_name='Person', foreign_key='manager_id')
         c.has_many('sites', class_name='Site', foreign_key='maintainer_id')
+        c.has_many('commented_articles', through='comments', source='parent',
+                   source_type='Article')
 
 class Company(AssocTest):
     def _config(c):

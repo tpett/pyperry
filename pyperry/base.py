@@ -5,7 +5,7 @@ from copy import deepcopy, copy
 from pyperry import errors
 from pyperry.relation import Relation
 from pyperry.adapter.abstract_adapter import AbstractAdapter
-from pyperry.association import BelongsTo, HasMany, HasOne
+from pyperry.association import BelongsTo, HasMany, HasOne, HasManyThrough
 
 class BaseMeta(type):
     """
@@ -864,7 +864,10 @@ class Base(object):
         @return: None
 
         """
-        cls._create_external_association(HasMany(cls, id, **kwargs))
+        if 'through' in kwargs:
+            cls._create_external_association(HasManyThrough(cls, id, **kwargs))
+        else:
+            cls._create_external_association(HasMany(cls, id, **kwargs))
 
     @classmethod
     def has_one(cls, id, **kwargs):

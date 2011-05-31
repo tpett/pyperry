@@ -1,11 +1,14 @@
 import tests
 import unittest
+from nose.plugins.skip import SkipTest
 import pyperry
 import fixtures.association_models
 import fixtures.extended_association_models
+from fixtures.test_adapter import TestAdapter
 from pyperry import errors
 from pyperry import Relation, Association
-from pyperry.association import BelongsTo, Has, HasMany, HasOne
+from pyperry.association import BelongsTo, Has, HasMany, HasOne, HasManyThrough
+from pyperry.middlewares.local_cache import LocalCache
 
 finder_options = (Relation.singular_query_methods + Relation.plural_query_methods +
     Relation.aliases.keys())
@@ -255,6 +258,179 @@ class HasOneTestCase(BaseAssociationTestCase):
         """should set collection to false"""
         self.assertFalse(self.has_one.collection())
 
+
+class HasManyThroughTestCase(BaseAssociationTestCase):
+
+    MODELS = ['Site', 'Comment', 'Article', 'Person']
+
+    def setUp(self):
+        self.klass = fixtures.association_models.Test
+        self.id = 'has_many_through'
+        self.association = HasManyThrough(self.klass, self.id)
+        self.adapter = TestAdapter
+
+        # assign fixtures.association_models.ModelClass to self.ModelClass
+        for m in self.MODELS:
+            setattr(self, m, getattr(fixtures.association_models, m))
+
+    def tearDown(self):
+        """reset read adapter instances for each model"""
+        for m in self.MODELS:
+            model = getattr(self, m)
+            model._adapters = {}
+            if '_middlewares' in model.adapter_config['read']:
+                del model.adapter_config['read']['_middlewares']
+
+
+    def test_type(self):
+        """should set association type to has_many_through"""
+        self.assertEqual(self.association.type(), 'has_many_through')
+
+    def test_collection(self):
+        """should set collection to true"""
+        self.assertEqual(self.association.collection(), True)
+
+    def test_not_polymorphic(self):
+        """should not allow polymorphic associations"""
+        association = HasManyThrough(self.Site, 'comments', through='articles',
+                                     _as='whatever')
+        self.assertEqual(association.polymorphic(), False)
+
+    def test_through_exists(self):
+        """should raise when through is not an existing association"""
+        association = HasManyThrough(self.Site, self.id, through='a_tunnel')
+        self.assertRaises(errors.AssociationNotFound,
+                          association.proxy_association)
+
+    def test_source_association_exists_on_proxy(self):
+        """
+        should raise when the source association is not defined on the proxy
+        association's class
+        """
+        association = HasManyThrough(self.Site, self.id, through='articles')
+        self.assertRaises(errors.AssociationNotFound,
+                          association.source_association)
+
+    def test_association_name(self):
+        """should use the source association that matches the association id"""
+        association = HasManyThrough(self.Site, 'comments', through='articles')
+        self.assertEqual(association.source_association().id, 'comments')
+
+    def test_source_option(self):
+        """
+        should use the source option as the target association name if provided
+        """
+        association = HasManyThrough(self.Site, 'dumb_comments',
+                                     through='articles', source='comments')
+        self.assertEqual(association.source_association().id, 'comments')
+
+    def test_relation_mapped_to_source(self):
+        """should return a relation mapped to the source association's class"""
+        self.adapter.data = {'id': 1}
+        site = self.Site.first()
+        comments = site.article_comments()
+
+        self.assertEqual(type(comments), pyperry.Relation)
+        self.assertEqual(comments.klass, self.Comment)
+
+    def test_executes_2_queries(self):
+        """should execute two queries when calling the association method"""
+        self.adapter.data = {'id': 1}
+        site = self.Site.first()
+
+        self.adapter.calls = []
+        comments = site.article_comments().all()
+        self.assertEqual(len(self.adapter.calls), 2)
+
+    def test_when_source_is_has(self):
+        """
+        should use the primary key values from the proxy association and the
+        foreign key attribute from the source association when the source
+        association is a has association
+        """
+        self.adapter.data = {'id': 1}
+        site = self.Site.first()
+        self.adapter.calls = []
+
+        self.adapter.data = [{'id': 1}, {'id': 2}, {'id': 3}]
+        relation = site.article_comments()
+        where_values = relation.query()['where']
+        self.assertEqual(len(self.adapter.calls), 1)
+
+        where_values.sort()
+        self.assertEqual(self.Comment, relation.klass)
+        self.assertEqual(where_values[0], {'parent_id': [1,2,3]})
+        self.assertEqual(where_values[1], {'parent_type': 'Article'})
+
+    def test_when_source_is_belongs_to(self):
+        """
+        should use the foreign key values from the proxy association and the
+        primary key attribute from the source association when the source
+        association is a belongs_to association
+        """
+        self.adapter.data = {'id': 1}
+        article = self.Article.first()
+
+        self.adapter.calls = []
+        self.adapter.data = [{'id': 1, 'person_id': 11},
+                {'id': 2, 'person_id': 12}, {'id': 3, 'person_id': 13}]
+
+        relation = article.comment_authors()
+        where_values = relation.query()['where']
+
+        self.assertEqual(len(self.adapter.calls), 1)
+        self.assertEqual(relation.klass, self.Person)
+        self.assertEqual([{'id': [11, 12, 13]}], where_values)
+
+    def test_when_source_is_polymorphic_belongs_to(self):
+        """
+        should use the source_type attribute to determine the source's class
+        when the source association is a polymorphic belongs_to asssociation
+        """
+        self.adapter.data = {'id': 1}
+        person = self.Person.first()
+
+        self.adapter.calls = []
+        self.adapter.data = [
+            {'id': 1, 'parent_id': 11, 'parent_type': 'FooBar'},
+            {'id': 2, 'parent_id': 12, 'parent_type': 'FooBar'},
+            {'id': 3, 'parent_id': 13, 'parent_type': 'FooBar'}
+        ] # parent_type should be ignored by has many through
+
+        relation = person.commented_articles()
+        where_values = relation.query()['where']
+
+        self.assertEqual(len(self.adapter.calls), 1)
+        self.assertEqual(relation.klass, self.Article)
+        self.assertEqual([{'id': [11, 12, 13]}], where_values)
+
+    def test_fresh(self):
+        """
+        should apply the fresh scope to both the proxy association and the
+        source association
+        """
+        raise SkipTest
+        # TODO: currently it is not possible to share the fresh scope between
+        # the proxy and source associations
+
+        self.adapter.data = {'id': 1}
+        self.Article.add_middleware('read', LocalCache)
+        self.Comment.add_middleware('read', LocalCache)
+        self.Article._adapters = {}
+        self.Comment._adapters = {}
+
+        site = self.Site.first()
+        self.adapter.calls = []
+
+        relation = site.article_comments()
+        relation.all()
+        self.assertEqual(len(self.adapter.calls), 2)
+
+        relation.all()
+        self.assertEqual(len(self.adapter.calls), 2) # should hit cache
+
+        relation = relation.fresh().all()
+        self.assertEqual(len(self.adapter.calls), 4) # should skip cache
 
 
 class TargetModel(pyperry.Base):

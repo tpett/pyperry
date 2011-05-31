@@ -849,6 +849,11 @@ class BaseHasManyMethodTestCase(BaseAssociationTestCase):
         """should be an instance of HasMany"""
         self.assertEqual(True, type(self.Test.defined_associations['things']) is pyperry.association.HasMany)
 
+    def test_has_many_through(self):
+        self.Test.has_many('assertions', through='test_methods')
+        self.assertEqual(type(self.Test.defined_associations['assertions']),
+                         pyperry.association.HasManyThrough)
+
 class BaseHasOneMethodTestCase(BaseAssociationTestCase):
 
     def test_class_method(self):
