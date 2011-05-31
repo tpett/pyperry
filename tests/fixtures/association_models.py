@@ -67,6 +67,7 @@ class Person(AssocTest):
         c.has_many('sites', class_name='Site', foreign_key='maintainer_id')
         c.has_many('commented_articles', through='comments', source='parent',
                    source_type='Article')
+        c.has_many('maintained_articles', through='sites', source='articles')
 
 class Company(AssocTest):
     def _config(c):

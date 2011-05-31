@@ -280,6 +280,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
             model._adapters = {}
             if '_middlewares' in model.adapter_config['read']:
                 del model.adapter_config['read']['_middlewares']
+            model.set_primary_key('id')
 
 
     def test_type(self):
@@ -361,6 +362,29 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
         self.assertEqual(self.Comment, relation.klass)
         self.assertEqual(where_values[0], {'parent_id': [1,2,3]})
         self.assertEqual(where_values[1], {'parent_type': 'Article'})
+
+    def test_custom_proxy_pk_when_source_is_has(self):
+        """
+        should use the source association's primary_key attribute to
+        collect the proxy_ids when the source association is a has
+        """
+        self.adapter.data = {'id': 1}
+        person = self.Person.first()
+        self.adapter.calls = []
+
+        self.Site.set_primary_key('name')
+
+        self.adapter.data = [{'id': 1, 'name': 'a'}, {'id': 2, 'name': 'b'},
+                {'id': 3, 'name': 'c'}]
+        relation = person.maintained_articles()
+        where_values = relation.query()['where']
+        self.assertEqual(len(self.adapter.calls), 1)
+
+        self.assertEqual(self.Article, relation.klass)
+        # For this test we are assuming that Article.site_id references
+        # Site.name instead of assuming Article.site_id references Site.id
+        self.assertEqual(where_values, [{'site_id': ['a','b','c']}])
+
 
     def test_when_source_is_belongs_to(self):
         """

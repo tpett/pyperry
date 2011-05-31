@@ -336,7 +336,7 @@ class HasManyThrough(Has):
         source = self.source_association()
         proxy = self.proxy_association()
         key_attr = (source.foreign_key if source.type() == 'belongs_to' else
-                    proxy.primary_key()) # TODO: hmm... source or proxy?
+                    source.primary_key())
 
         proxy_ids = (lambda: [getattr(x, key_attr) for x in proxy.scope(obj)])
 
