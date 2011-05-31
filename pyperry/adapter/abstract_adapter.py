@@ -12,6 +12,9 @@ There are several layers to an adapter request and response::
     Processors
       |     ^
       V     |
+    Model Bridge
+      |     ^
+      V     |
     Middlewares
       |     ^
       V     |
@@ -67,7 +70,7 @@ class AbstractAdapter(object):
 
     adapter_types = ['read', 'write']
 
-    def __init__(self, config, mode=None, middlewares=None):
+    def __init__(self, config, mode=None, middlewares=None, processors=[]):
         """
         Create a new adapter object with the given configuration running as a
         `mode` adapter
@@ -78,11 +81,14 @@ class AbstractAdapter(object):
         self.config = DelayedConfig(config)
         self.mode = mode
         self.middlewares = middlewares
+        self.processors = processors
         self._stack = None
 
         # Add in configured middlewares
         if hasattr(self.config, '_middlewares'):
             self.middlewares = self.middlewares + self.config._middlewares
+        if hasattr(self.config, '_processors'):
+            self.processors = self.processors + self.config._processors
 
         if not mode in self.adapter_types:
             raise errors.ConfigurationError("Adapter requires `mode` keyword")
@@ -90,21 +96,22 @@ class AbstractAdapter(object):
     @property
     def stack(self):
         """
-        Setup the stack plumbing with the configured middleware
+        Setup the stack plumbing with the configured stack items
 
-        Wrap each middleware in reverse order around the call to the adapter
-        method.  This will allow middlewares to intercept requests, modify
-        query information and pass it along, do things with the results of the
-        query or any combination of these things.
+        Wrap each stack item (processors and middleware) in reverse order
+        around the call to the adapter method. This will allow stack items to
+        intercept requests, modify query information and pass it along, do
+        things with the results of the query or any combination of these
+        things.
 
         """
         if self._stack: return self._stack
 
         self._stack = getattr(self, self.mode)
-        middlewares = copy(self.middlewares)
-        middlewares.reverse()
+        stack_items = copy(self.processors) + copy(self.middlewares)
+        stack_items.reverse()
 
-        for (klass, config) in middlewares:
+        for (klass, config) in stack_items:
             self._stack = klass(self._stack, config)
 
         return self._stack

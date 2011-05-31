@@ -1,27 +1,23 @@
 import tests
 import unittest
+from nose.plugins.skip import SkipTest
 import pyperry
 from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry import errors
 from pyperry.middlewares.model_bridge import ModelBridge
 
-class MiddlewareA(object):
+class MiddlewareTestBase(object):
     def __init__(self, next, options={}):
         self.next = next
         self.options = options
-
     def __call__(self, **kwargs):
-        DummyAdapter.stack_tracer.append('a')
+        DummyAdapter.stack_tracer.append(self.trace_value)
         return self.next(**kwargs)
 
-class MiddlewareB(object):
-    def __init__(self, next, options={}):
-        self.next = next
-        self.options = options
-
-    def __call__(self, **kwargs):
-        DummyAdapter.stack_tracer.append('b')
-        return self.next(**kwargs)
+class MiddlewareA(MiddlewareTestBase): trace_value = 'a'
+class MiddlewareB(MiddlewareTestBase): trace_value = 'b'
+class ProcessorA(MiddlewareTestBase): trace_value = 'pa'
+class ProcessorB(MiddlewareTestBase): trace_value = 'pb'
 
 class DummyAdapter(AbstractAdapter):
 
@@ -79,9 +75,18 @@ class InitTestCase(AdapterBaseTestCase):
         adapter = AbstractAdapter({}, mode='read', middlewares=[1])
         self.assertEqual(adapter.middlewares, [1])
 
-    def test_init_middleware_with_model_bridge(self):
-        """don't add the ModelBridge if it's already included"""
-        pass
+    def test_init_processors(self):
+        """processors should be initialized as an empty list"""
+        adapter = AbstractAdapter({}, mode='read')
+        self.assertEqual(adapter.processors, [])
+
+
+    def test_init_processors_with_kwargs(self):
+        """
+        processors should be initialized to the processors key word argument
+        """
+        adapter = AbstractAdapter({}, mode='read', processors='foo')
+        self.assertEqual(adapter.processors, 'foo')
 
     def test_declares_stack(self):
         """should declate a _stack attr"""
@@ -96,6 +101,14 @@ class InitTestCase(AdapterBaseTestCase):
             mode='read')
         self.assertEquals(adapter.middlewares,
                 AbstractAdapter({}, mode='read').middlewares + middlewares)
+
+    def test_appends_processors_option(self):
+        """should append _processors option to the processors"""
+        processors = ['foo']
+        _processors = ['bar']
+        adapter = AbstractAdapter({'_processors': _processors}, mode='read',
+                                  processors=processors)
+        self.assertEqual(adapter.processors, processors + _processors)
 
 
 ##
@@ -127,9 +140,11 @@ class StackMethodTestCase(AdapterBaseTestCase):
     def test_stack_called_in_order(self):
         """use the DummyAdapter to test middleware call order"""
         adapter = DummyAdapter({}, mode='read',
-                middlewares=[(MiddlewareA, {}), (MiddlewareB, {})])
+                middlewares=[(MiddlewareA, {}), (MiddlewareB, {})],
+                processors=[(ProcessorA, {}), (ProcessorB, {})])
         result = adapter()
-        self.assertEqual(DummyAdapter.stack_tracer, ['a', 'b', 'read'])
+        self.assertEqual(DummyAdapter.stack_tracer,
+                ['pa', 'pb', 'a', 'b', 'read'])
         self.assertEqual(result, [])
 
 ##
@@ -159,6 +174,18 @@ class CallMethodTestCase(AdapterBaseTestCase):
 
         self.assertEqual(self.adapter.stack.__class__.__name__,
                 'BrokenMiddleware')
+
+        self.assertRaises(errors.BrokenAdapterStack, self.adapter, mode='read')
+
+    def test_broken_processor(self):
+        """should raise exception if processor returns a non-iterable"""
+        class BrokenProcessor(object):
+            def __init__(self, next, options={}): self.next = next
+            def __call__(self, **kwargs): pass
+        self.adapter.processors = [(BrokenProcessor, {})]
+
+        self.assertEqual(self.adapter.stack.__class__.__name__,
+                'BrokenProcessor')
 
         self.assertRaises(errors.BrokenAdapterStack, self.adapter, mode='read')
 

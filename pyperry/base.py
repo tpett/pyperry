@@ -547,6 +547,32 @@ class Base(object):
         cls.configure(adapter_type, _middlewares=middlewares)
 
     @classmethod
+    def add_processor(cls, adapter_type, klass, options=None, **kwargs):
+        """
+        Add a processor to the given adapter
+
+        Interface for adding a processor to the adapter stack. Processors come
+        before the middleware in the adapter stack. For more information on
+        processors see docs on
+        L{pyperry.adapter.abstract_adapter.AbstractAdapter}.
+
+        @param adapter_type: specify type of adapter ('read' or 'write')
+        @param klass: specify the class to use as the processor
+        @param options: specify an options dictionary to pass to processor
+        @param kwargs: specify options with keyword arguments instead of
+        options.
+
+        """
+        processors = []
+        if cls.adapter_config.has_key(adapter_type):
+            processors = cls.adapter_config[adapter_type].get('_processors')
+
+        processor_config = (klass, options or kwargs or {})
+        processors.append(processor_config)
+
+        cls.configure(adapter_type, _processors=processors)
+
+    @classmethod
     def adapter(cls, adapter_type):
         """
         Returns the adapter specified by C{adapter_type}

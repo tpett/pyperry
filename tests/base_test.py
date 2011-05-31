@@ -1,5 +1,6 @@
 import tests
 import unittest
+from nose.plugins.skip import SkipTest
 import copy
 
 import pyperry
@@ -299,6 +300,45 @@ class BaseAddMiddlewareMethodTestCase(BaseTestCase):
                 [
                     (self.Middle, { 'foo': 'bar' }),
                     (self.Middle, { 'baz': 'boo' }) ])
+
+
+##
+# add_processor method
+#
+class BaseAddProcessorMethodTestCase(BaseTestCase):
+
+    def setUp(self):
+        class Processor(object):
+            def __init__(self, adapter, options=None):
+                self.adapter = adapter
+
+            def __call__(self, **kwargs):
+                return self.adapter(**kwargs)
+        self.Processor = Processor
+
+    def test_class_method(self):
+        """should be a class method"""
+        self.assertEqual(pyperry.Base.add_processor.im_self.__name__, 'Base')
+
+    def test_parameters(self):
+        """should require 2 params taking an optional 3rd dict / kwargs"""
+        class Test(pyperry.Base): pass
+        Test.add_processor('read', self.Processor)
+        Test.add_processor('read', self.Processor, { 'foo': 'bar' })
+        Test.add_processor('read', self.Processor, foo='bar')
+
+    def test_saves_config(self):
+        """should append value to adapter_config[type] middlewares option"""
+        class Test(pyperry.Base): pass
+        Test.add_processor('read', self.Processor, { 'foo': 'bar' })
+        self.assertEqual(Test.adapter_config['read']['_processors'],
+                [(self.Processor, { 'foo': 'bar' })])
+        Test.add_processor('read', self.Processor, { 'baz': 'boo' })
+        self.assertEqual(Test.adapter_config['read']['_processors'],
+                [
+                    (self.Processor, { 'foo': 'bar' }),
+                    (self.Processor, { 'baz': 'boo' }) ])
+
 
 ##
 # Adapter method
