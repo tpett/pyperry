@@ -100,6 +100,14 @@ class FetchRecordsTestCase(BaseRelationTestCase):
         self.relation.fetch_records()
         self.assertEqual(len(TestAdapter.calls), 1)
 
+    def test_caches_empty_list(self):
+        TestAdapter.count = 0
+        self.relation.fetch_records()
+        self.assertEqual(len(TestAdapter.calls), 1)
+
+        self.relation.fetch_records()
+        self.assertEqual(len(TestAdapter.calls), 1)
+
     def test_list_is_alias(self):
         """list method should be an alias for fetch_records"""
         self.assertEqual(self.relation.list(), self.relation.fetch_records())

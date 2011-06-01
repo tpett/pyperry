@@ -136,7 +136,7 @@ class Relation(object):
 
     def fetch_records(self):
         """Perform the query and return the resulting list (aliased as list)"""
-        if not self._records:
+        if self._records is None:
             self._records = self.klass.fetch_records(self)
         return self._records
     list = fetch_records
