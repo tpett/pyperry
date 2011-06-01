@@ -21,3 +21,6 @@ class MalformedResponse(Exception):
 
 class AssociationNotFound(Exception):
     pass
+
+class AssociationPreloadNotSupported(Exception):
+    pass

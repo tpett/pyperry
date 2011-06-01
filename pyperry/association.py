@@ -125,6 +125,7 @@ class Association(object):
 
 
     def source_klass(self, obj=None):
+        eager_loading = isinstance(obj, list)
         poly_type = None
         if (self.options.has_key('polymorphic') and
             self.options['polymorphic'] and obj):
@@ -132,6 +133,12 @@ class Association(object):
                 poly_type = getattr(obj, '%s_type' % self.id)
             else:
                 poly_type = obj
+
+        if eager_loading and not self.eager_loadable():
+            raise errors.AssociationPreloadNotSupported(
+                    "This association cannot be eager loaded. It either has "
+                    "a config with callables, or it is a polymorphic belongs "
+                    "to association.")
 
         if poly_type:
             type_list = [
@@ -206,7 +213,7 @@ class BelongsTo(Association):
     def polymorphic_type(self):
         return '%s_type' % self.id
 
-    def scope(self, obj):
+    def scope(self, obj_or_list):
         """
         Returns a scope on the source class containing this association
 
@@ -221,9 +228,14 @@ class BelongsTo(Association):
             where('id = %s' % target['foo_id'])
 
         """
-        if hasattr(obj, self.foreign_key) and obj[self.foreign_key]:
-            return self._base_scope(obj).where({
-                self.primary_key(): obj[self.foreign_key]
+        if isinstance(obj_or_list, pyperry.Base):
+            keys = obj_or_list[self.foreign_key]
+        else:
+            keys = [o[self.foreign_key] for o in obj_or_list]
+
+        if keys is not None:
+            return self._base_scope(obj_or_list).where({
+                self.primary_key(): keys
             })
 
 class Has(Association):
@@ -247,7 +259,7 @@ class Has(Association):
     def polymorphic_type(self):
         return '%s_type' % self.options['_as']
 
-    def scope(self, obj):
+    def scope(self, obj_or_list):
         """
         Returns a scope on the source class containing this association
 
@@ -269,9 +281,16 @@ class Has(Association):
 
         """
         pk_attr = self.primary_key()
-        if hasattr(obj, pk_attr) and obj[pk_attr]:
-            scope = self._base_scope(obj).where({
-                self.foreign_key: obj[pk_attr]
+        if isinstance(obj_or_list, pyperry.Base):
+            keys = obj_or_list[pk_attr]
+            obj = obj_or_list
+        else:
+            keys = [o[pk_attr] for o in obj_or_list]
+            obj = obj_or_list[0]
+
+        if keys is not None:
+            scope = self._base_scope(obj_or_list).where({
+                self.foreign_key: keys
             })
             if self.polymorphic():
                 scope = scope.where({

@@ -131,6 +131,7 @@ class BelongsToTestCase(BaseAssociationTestCase):
         self.foreign_key = 'some_id'
         self.belongs_to = BelongsTo(self.klass, self.id)
         self.article = fixtures.association_models.Article
+        self.comment = fixtures.association_models.Comment
 
     def test_type(self):
         """should return 'belongs_to' as the type"""
@@ -177,6 +178,27 @@ class BelongsToTestCase(BaseAssociationTestCase):
         """should the scope should have the options for the association query"""
         record = self.article({'site_id': 1})
         self.assertEqual({'id': 1}, self.article.defined_associations['site'].scope(record).params['where'][0])
+
+    def test_association_with_records(self):
+        """
+        should use an array of primary key values if the argument is an array
+        of records
+        """
+        records = [self.article({'site_id': x}) for x in [1,2,3]]
+        association = self.article.defined_associations['site']
+        where_values = association.scope(records).query()['where']
+        self.assertEqual(where_values, [{'id': [1, 2, 3]}])
+
+    def test_poly_association_with_records(self):
+        """
+        should raise AssociationPreloadNotSupported for polymorphic
+        associations when the argument is an array of records
+        """
+        records = [self.comment({'parent_id': x}) for x in [1,2,3]]
+        association = self.comment.defined_associations['parent']
+        self.assertRaises(errors.AssociationPreloadNotSupported,
+                          association.scope, records)
+
 
 
 class HasTestCase(BaseAssociationTestCase):
@@ -231,6 +253,29 @@ class HasTestCase(BaseAssociationTestCase):
         record = self.article({'id': 1})
         self.assertEqual("text LIKE '%awesome%'",
             self.article.defined_associations['awesome_comments'].scope(record).params['where'][0])
+
+    def test_association_with_records(self):
+        """
+        should raise AssociationPreloadNotSupported for polymorphic
+        associations when the argument is an array of records
+        """
+        records = [self.article({'id': x}) for x in [1,2,3]]
+        association = self.article.defined_associations['comments']
+        where_values = association.scope(records).query()['where']
+        where_values.sort()
+        expected = [{'parent_id': [1, 2, 3]}, {'parent_type': 'Article'}]
+        self.assertEqual(where_values, expected)
+
+    def test_poly_association_with_records(self):
+        """
+        should raise AssociationPreloadNotSupported when the association is not
+        eager loadable
+        """
+        records = [self.site({'id': x}) for x in [1,2,3]]
+        association = self.site.defined_associations['awesome_comments']
+        self.assertRaises(errors.AssociationPreloadNotSupported,
+                          association.scope, records)
+
 
 class HasManyTestCase(BaseAssociationTestCase):
 
