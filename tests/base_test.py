@@ -339,6 +339,16 @@ class BaseAddProcessorMethodTestCase(BaseTestCase):
                     (self.Processor, { 'foo': 'bar' }),
                     (self.Processor, { 'baz': 'boo' }) ])
 
+    def test_add_processor_after_adapter(self):
+        """
+        should add processor without raising exception if adapter already
+        configured
+        """
+        class Test(pyperry.Base): pass
+        Test.configure('read', adapter='Foo')
+        Test.add_processor('read', self.Processor, { 'foo': 'bar' })
+        self.assertEqual(len(Test.adapter_config['read']['_processors']), 1)
+
 
 ##
 # Adapter method

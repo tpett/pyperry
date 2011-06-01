@@ -565,7 +565,8 @@ class Base(object):
         """
         processors = []
         if cls.adapter_config.has_key(adapter_type):
-            processors = cls.adapter_config[adapter_type].get('_processors')
+            processors = (cls.adapter_config[adapter_type].get('_processors')
+                          or [])
 
         processor_config = (klass, options or kwargs or {})
         processors.append(processor_config)
