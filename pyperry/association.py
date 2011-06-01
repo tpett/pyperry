@@ -116,7 +116,7 @@ class Association(object):
         for option in self.finder_options():
             if type(self.options.get(option)).__name__ == 'function':
                 return False
-        return True
+        return not (self.type() == 'belongs_to' and self.polymorphic())
 
     # MBM: This needs to be moved somewhere else. Probably in a constant.
     def finder_options(self):

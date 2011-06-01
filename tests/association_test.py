@@ -61,7 +61,8 @@ class GenericAssociationTestCase(BaseAssociationTestCase):
     def test_eager_loadable(self):
         """should be eager_loadable when the moethods do not rely
         on instance data"""
-        self.assertEqual(True, self.association.eager_loadable())
+        association = BelongsTo(self.klass, self.id)
+        self.assertEqual(True, association.eager_loadable())
 
     def test_eager_loadable_lambda(self):
         """should return false if a block is used for the param of
@@ -70,6 +71,11 @@ class GenericAssociationTestCase(BaseAssociationTestCase):
             self.assertEqual(False, Association(self.klass, self.id, **{
                 option: lambda x: {}
             }).eager_loadable())
+
+    def test_eager_loadable_poly(self):
+        """should return false for polymorphic belongs to associations"""
+        association = BelongsTo(self.klass, self.id, polymorphic=True)
+        self.assertEqual(association.eager_loadable(), False)
 
     def test_source_klass(self):
         """should return the class that is passed in the options"""
