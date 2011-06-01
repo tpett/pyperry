@@ -917,3 +917,26 @@ class BaseHasOneMethodTestCase(BaseAssociationTestCase):
     def test_instance(self):
         """should be an instance of HasOne"""
         self.assertEqual(True, type(self.Test.defined_associations['thing']) is pyperry.association.HasOne)
+
+class AssociationCachingTest(BaseAssociationTestCase):
+
+    def setUp(self):
+        self.Site = tests.fixtures.association_models.Site
+        self.site = self.Site({})
+
+    def test_create_methods(self):
+        """should create the association method on the first call"""
+        self.assertFalse('articles' in self.site.__dict__)
+        self.site.articles()
+        self.assertTrue('articles' in self.site.__dict__)
+
+    def test_cache_association(self):
+        """should cache the result of the association after the first call"""
+        self.assertFalse('_articles' in self.site.__dict__)
+        self.site.articles()
+        self.assertTrue('_articles' in self.site.__dict__)
+
+    def test_add_maually(self):
+        """should allow the result of the association to be set manually"""
+        self.site.articles = 'foo'
+        self.assertEqual(self.site.articles(), 'foo')

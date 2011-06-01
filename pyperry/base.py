@@ -358,11 +358,8 @@ class Base(object):
         """
         if key in self.defined_attributes:
             return self[key]
-        elif key in self.defined_associations.keys():
-            def method():
-                return self.defined_associations[key](self)
-            method.__name__ = key
-            return method
+        elif key in self.defined_associations:
+            return self._association_method(key)
         else:
             raise AttributeError("object '%s' has no attribute '%s'" %
                 (self.__class__.__name__, key))
@@ -383,9 +380,11 @@ class Base(object):
         @param value: value to set the C{key} attribute to
 
         """
-        if(key in self.defined_attributes
+        if (key in self.defined_attributes
                 and not self._has_writer_property(key)):
             self[key] = value
+        elif key in self.defined_associations and not callable(value):
+            setattr(self, '_' + key, value)
         else:
             object.__setattr__(self, key, value)
 
@@ -929,6 +928,23 @@ class Base(object):
     @classmethod
     def _create_external_association(cls, association):
         cls.defined_associations[association.id] = association
+
+    def _association_method(self, association_id):
+        """
+        Defines an association method on this instance and returns that method.
+        The association method calls the matching association in
+        self.defined_associations then caches and returns the result.
+
+        """
+        def method():
+            cache_attr = '_' + association_id
+            if not hasattr(self, cache_attr):
+                association = self.defined_associations[association_id]
+                setattr(self, cache_attr, association(self))
+            return getattr(self, cache_attr)
+
+        setattr(self, association_id, method)
+        return getattr(self, association_id)
 
     def _has_writer_property(self, key):
         """Return True iff key is a property with a setter"""
