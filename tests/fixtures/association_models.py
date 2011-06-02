@@ -27,7 +27,8 @@ class Site(AssocTest):
                     AND articles.site_id = %s
             """ % s.id
         )
-        c.has_many('articles', class_name='Article')
+        c.has_many('articles', class_name='Article',
+                   namespace='tests.fixtures.association_models')
         c.has_many('comments', _as='parent', class_name='Comment')
         c.has_many('awesome_comments', class_name='Comment', conditions="1",
             sql=lambda s: """

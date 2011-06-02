@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 
 class DelayedMerge(object):
     """
@@ -127,10 +127,18 @@ class Relation(object):
         if self._query: return self._query
 
         self._query = {}
-        for method in self.singular_query_methods + self.plural_query_methods:
+        query_methods = [method for method in
+                (self.plural_query_methods + self.singular_query_methods)
+                if method is not 'includes']
+
+        for method in query_methods:
             value = self.params[method]
             if value:
                 self._query[method] = self._eval_lambdas(value)
+
+        value = self.includes_value()
+        if value:
+            self._query['includes'] = value
 
         return self._query
 
@@ -140,6 +148,67 @@ class Relation(object):
             self._records = self.klass.fetch_records(self)
         return self._records
     list = fetch_records
+
+    def includes_value(self):
+        """
+        Combines arguments passed to includes into a single dict to support
+        nested includes.
+
+        For example, the following query::
+
+            r = relation.includes('foo')
+            r = r.includes({'bar': 'baz'})
+            r = r.includes('boo', {'bar': 'biz'})
+
+        will result in an includes dict like this::
+
+            {
+                'foo': {},
+                'bar': {'biz': {}, 'baz': {}},
+                'boo': {}
+            }
+
+        """
+        values = self.params['includes']
+        if not values: return
+
+        values = [(v() if callable(v) else v) for v in values]
+        nested_includes = self._get_includes_value(values)
+        return nested_includes
+
+    def _get_includes_value(self, value):
+        """does the dirty work for includes value"""
+        includes = {}
+
+        if not value: # leaf node
+            pass
+        elif hasattr(value, 'iteritems'): # dict
+            for k, v in value.iteritems():
+                v = {k: self._get_includes_value(v)}
+                includes = self._deep_merge(includes, v)
+        elif hasattr(value, '__iter__'): # list, but not string
+            for v in value:
+                v = self._get_includes_value(v)
+                includes = self._deep_merge(includes, v)
+        else: # string
+            includes.update({value: {}})
+
+        return includes
+
+    def _deep_merge(self, a, b):
+        """
+        Recursively merges dict b into dict a, such that if a[x] is a dict and
+        b[x] is a dict, b[x] is merged into a[x] instead of b[x] overwriting
+        a[x].
+
+        """
+        a = copy(a)
+        for k, v in b.iteritems():
+            if k in a and hasattr(v, 'iteritems'):
+                a[k] = self._deep_merge(a[k], v)
+            else:
+                a[k] = v
+        return a
 
     def modifiers(self, value):
         """

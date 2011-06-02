@@ -158,6 +158,94 @@ class QueryMethodsTestCase(BaseRelationTestCase):
             self.assertEqual(relation.params[method_name], ['foo', 'baz'])
             self.assertEqual(self.relation.params[method_name], [])
 
+
+class IncludesTestCase(BaseRelationTestCase):
+
+    def test_string_arg(self):
+        """should convert a string argument to a hash key"""
+        rel = self.relation.includes('foo')
+        includes = rel.query()['includes']
+        expected = {'foo': {}}
+        self.assertEqual(includes, expected)
+
+    def test_dict_arg(self):
+        """should split multi item dicts into multiple entries"""
+        rel = self.relation.includes({'foo': 'bar', 'biz': 'baz'})
+        includes = rel.query()['includes']
+        expected = {'foo': {'bar': {}}, 'biz': {'baz': {}}}
+        self.assertEqual(includes, expected)
+
+    def test_nested_arg(self):
+        """should process nested dicts recursively"""
+        rel = self.relation.includes({
+            'foo': {'bar': {'biz': {'baz': {'are we there yet?': 'inception'}}}}
+        })
+        includes = rel.query()['includes']
+        expected = {
+            'foo': {'bar': {
+                'biz': {'baz': {'are we there yet?': {'inception': {}}}}
+            }}
+        }
+        self.assertEqual(includes, expected)
+
+    def test_array_arg(self):
+        """should merge args onto hash in order"""
+        rel = self.relation.includes('foo', 'biz', {'biz': 'baz'}, 'bar', 'foo')
+        includes = rel.query()['includes']
+        expected = {'foo': {}, 'biz': {'baz': {}}, 'bar': {}}
+        self.assertEqual(includes, expected)
+
+    def test_multiple_calls(self):
+        """should build result from multiple calls like array arg"""
+        rel = self.relation.includes({'foo': 'bar', 'baz': 'perry'})
+        rel = rel.includes({'foo': 'poo'})
+        rel = rel.includes('foo')
+        includes = rel.query()['includes']
+        expected = {'foo': {'bar': {}, 'poo': {}}, 'baz': {'perry': {}}}
+        self.assertEqual(includes, expected)
+
+    def test_comments_example(self):
+        """
+        making sure this works for the example in the source code comments
+        """
+        rel = self.relation.includes('foo')
+        rel = rel.includes({'bar': 'baz'})
+        rel = rel.includes('boo', {'bar': 'biz'})
+        includes = rel.query()['includes']
+        expected = {
+            'foo': {},
+            'bar': {'biz': {}, 'baz': {}},
+            'boo': {}
+        }
+        self.assertEqual(includes, expected)
+
+    def test_nested_arrays(self):
+        """
+        going pathological with includes, because this stuff really happens
+        """
+        rel = self.relation.includes({
+            'foo': {'bar': ['biz', {'doo': 'dah'}, 'baz'], 'bing': 'bang'},
+        })
+        rel = rel.includes('asdf', ['a', 'b', 'c'],
+                {'foo': {'walla': 'walla', 'bar': {'doo': 'doo'}}})
+        includes = rel.query()['includes']
+        expected = {
+            'asdf': {},
+            'a': {}, 'b': {}, 'c': {},
+            'foo': {
+                'walla': {'walla': {}},
+                'bar': {
+                    'biz': {},
+                    'doo': {'doo': {}, 'dah': {}},
+                    'baz': {}
+                },
+                'bing': {'bang': {}},
+            }
+        }
+        self.assertEqual(includes, expected)
+
+
+
 ##
 # Test merging two relations
 #

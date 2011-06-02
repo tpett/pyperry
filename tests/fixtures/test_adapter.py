@@ -34,6 +34,16 @@ class TestAdapter(AbstractAdapter):
         cls.count = 1
 
 
+class PreloadTestAdapter(TestAdapter):
+    def read(self, **kwargs):
+        rel = kwargs['relation']
+        self.calls.append(rel)
+        class_name = rel.klass.__name__
+        results = [x[class_name] for x in self.data]
+        return results
+
+
+
 class SuccessAdapter(object):
     """Adapter-like class where __call__ always returns a success response"""
 
