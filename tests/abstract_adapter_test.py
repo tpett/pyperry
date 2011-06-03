@@ -1,6 +1,7 @@
 import tests
 import unittest
 from nose.plugins.skip import SkipTest
+import socket
 import pyperry
 from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry import errors
@@ -220,4 +221,29 @@ class ResetMethodTestCase(AdapterBaseTestCase):
         self.assertTrue(self.adapter._stack)
         self.adapter.reset()
         self.assertFalse(self.adapter._stack)
+
+##
+# socket timeouts
+#
+class SocketTimeoutTestCase(AdapterBaseTestCase):
+
+    def test_default(self):
+        """default timeout should be 10 seconds"""
+        socket.setdefaulttimeout(None)
+        adapter = AbstractAdapter({}, mode='read')
+        self.assertEqual(socket.getdefaulttimeout(), 10)
+
+    def test_global_default(self):
+        """
+        should use global default instead of 10 second default if the global
+        default is not None
+        """
+        socket.setdefaulttimeout(3)
+        adapter = AbstractAdapter({}, mode='read')
+        self.assertEqual(socket.getdefaulttimeout(), 3)
+
+    def test_config(self):
+        """socket timeout should be configurable"""
+        adapter = AbstractAdapter({'timeout': 5}, mode='read')
+        self.assertEqual(socket.getdefaulttimeout(), 5)
 

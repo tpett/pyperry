@@ -38,6 +38,7 @@ receive the raw response.
 
 """
 from copy import copy
+import socket
 
 import pyperry
 from pyperry import errors
@@ -83,6 +84,11 @@ class AbstractAdapter(object):
         self.middlewares = middlewares
         self.processors = processors
         self._stack = None
+
+        if hasattr(self.config, 'timeout'):
+            socket.setdefaulttimeout(self.config.timeout)
+        elif socket.getdefaulttimeout() is None:
+            socket.setdefaulttimeout(10)
 
         # Add in configured middlewares
         if hasattr(self.config, '_middlewares'):
