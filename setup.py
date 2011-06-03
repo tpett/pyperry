@@ -17,7 +17,8 @@ setup(
     install_requires=[
         'erlastic==1.0.0',
         'bert==1.0.0',
-        'bertrpc>0'
+        'bertrpc>0',
+        'simplejson>0'
     ],
     classifiers = [
             'Development Status :: 4 - Beta',
