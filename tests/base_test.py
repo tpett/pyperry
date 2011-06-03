@@ -391,6 +391,19 @@ class BaseConfigTestCase(BaseTestCase):
         """should be obfiscated after class creation"""
         self.assertTrue(not hasattr(self.Foo, '_config'))
 
+    def test_no_double_configuration(self):
+        """
+        the _config method should be called at most once and should not be
+        inherited by subclasses
+        """
+        class A(pyperry.Base):
+            def _config(cls):
+                cls.add_processor('read', 'some processor')
+        self.assertEqual(len(A.adapter_config['read']['_processors']), 1)
+
+        class B(A): pass
+        self.assertEqual(len(B.adapter_config['read']['_processors']), 1)
+
 
 class BaseFetchRecordsMethodTestCase(BaseTestCase):
 
