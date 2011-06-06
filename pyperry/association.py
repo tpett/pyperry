@@ -245,7 +245,7 @@ class Has(Association):
         if super(Has, self).foreign_key:
             return super(Has, self).foreign_key
         elif self.polymorphic():
-            return '%s_id' % self.options['_as']
+            return '%s_id' % self.options['as_']
         else:
             return '%s_id' % self.target_klass.__name__.lower()
 
@@ -254,10 +254,10 @@ class Has(Association):
     foreign_key = property(get_foreign_key, set_foreign_key)
 
     def polymorphic(self):
-        return self.options.has_key('_as')
+        return self.options.has_key('as_')
 
     def polymorphic_type(self):
-        return '%s_type' % self.options['_as']
+        return '%s_type' % self.options['as_']
 
     def scope(self, obj_or_list):
         """
@@ -267,7 +267,7 @@ class Has(Association):
         options set with the association::
 
             has_many('widgets', klass=Widget, foreign_key='widget_id')
-            has_many('comments', _as='parent')
+            has_many('comments', as_='parent')
 
         In addition to any finder options included with the association options
         the following will be added::

@@ -219,7 +219,7 @@ class HasTestCase(BaseAssociationTestCase):
     def test_polymorphic(self):
         """should return set polymorphic true if 'as' option passed and false otherwise"""
         self.assertEqual(False, self.has.polymorphic())
-        self.assertTrue(Has(self.klass, 'bar', _as='parent').polymorphic())
+        self.assertTrue(Has(self.klass, 'bar', as_='parent').polymorphic())
 
     def test_foreign_key(self):
         """should return the lowercase target class name followed by _id if association is not polymorphic"""
@@ -345,7 +345,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
     def test_not_polymorphic(self):
         """should not allow polymorphic associations"""
         association = HasManyThrough(self.Site, 'comments', through='articles',
-                                     _as='whatever')
+                                     as_='whatever')
         self.assertEqual(association.polymorphic(), False)
 
     def test_through_exists(self):
