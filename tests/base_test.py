@@ -814,27 +814,32 @@ class BaseDestroyMethodTestCase(BasePersistenceTestCase):
 # reload method
 #
 
-class ReloadTest(pyperry.Base):
+class ReloadTestModel(pyperry.Base):
     def _config(cls):
         cls.attributes('id', 'a', 'b')
-
+    @classmethod
+    def fetch_records(cls, relation):
+        cls.last_relation = relation
+        return [cls({ 'id': 2, 'a': 3, 'b': 4 })]
 
 class BaseReloadMethodTestCase(BasePersistenceTestCase):
 
-    def _fake_fetch_records(cls, relation):
-        return [ReloadTest({ 'id': 2, 'a': 3, 'b': 4 })]
-
     def setUp(self):
         super(self.__class__, self).setUp()
-        ReloadTest.fetch_records = self._fake_fetch_records
 
     def test_reload(self):
         before = { 'id': '1' }
-        test = ReloadTest(copy.copy(before))
+        test = ReloadTestModel(copy.copy(before))
         test.reload()
         self.assertNotEqual(test.attributes, before)
         self.assertEqual(test.attributes, { 'id': 2, 'a': 3, 'b': 4 })
         self.assertEqual(test.a, 3)
+
+    def test_fresh(self):
+        """should set the fresh value to True in the reload relation"""
+        test = ReloadTestModel({'id': 1})
+        test.reload()
+        self.assertEqual(test.last_relation.query()['fresh'], True)
 
 
 ##
