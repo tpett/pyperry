@@ -488,7 +488,8 @@ class Base(object):
 
     def reload(self):
         pk_condition = {self.pk_attr(): self.pk_value()}
-        self.attributes = self.scoped().where(pk_condition).first().attributes
+        relation = self.scoped().where(pk_condition).fresh()
+        self.attributes = relation.first().attributes
 
     def frozen(self):
         """Returns True if this instance is frozen and cannot be saved."""
