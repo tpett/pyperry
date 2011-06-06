@@ -33,6 +33,10 @@ class DummyAdapter(AbstractAdapter):
         else:
             return []
 
+    def execute(self, **kwargs):
+        DummyAdapter.stack_tracer.append('execute')
+        return super(DummyAdapter, self).execute(**kwargs)
+
 
 class AdapterBaseTestCase(unittest.TestCase):
 
@@ -145,7 +149,7 @@ class StackMethodTestCase(AdapterBaseTestCase):
                 processors=[(ProcessorA, {}), (ProcessorB, {})])
         result = adapter()
         self.assertEqual(DummyAdapter.stack_tracer,
-                ['pa', 'pb', 'a', 'b', 'read'])
+                ['pa', 'pb', 'a', 'b', 'execute', 'read'])
         self.assertEqual(result, [])
 
 ##
@@ -190,6 +194,7 @@ class CallMethodTestCase(AdapterBaseTestCase):
 
         self.assertRaises(errors.BrokenAdapterStack, self.adapter, mode='read')
 
+
 class CallModeTestCase(AdapterBaseTestCase):
 
     def setUp(self):
@@ -207,6 +212,32 @@ class CallModeTestCase(AdapterBaseTestCase):
         adapter itself"""
         kwargs = self.adapter(mode='delete')
         self.assertEqual(kwargs['mode'], 'delete')
+
+
+class ExecuteMethodTestCase(AdapterBaseTestCase):
+
+    def setUp(self):
+        class Test(AbstractAdapter):
+            last_called = None
+            def read(self, **kwargs):
+                self.last_called = 'read'
+                return 'foo'
+            def write(self, **kwargs):
+                self.last_called = 'write'
+            def delete(self, **kwargs):
+                self.last_called = 'delete'
+        self.adapter = Test({}, mode='read')
+
+    def test_mode_option(self):
+        """should call the method matching the mode given in the kwargs"""
+        for mode in ['read', 'write', 'delete']:
+            self.adapter.execute(mode=mode)
+            self.assertEqual(self.adapter.last_called, mode)
+
+    def test_return_value(self):
+        """should return the same value as the method it calls"""
+        result = self.adapter.execute(mode='read')
+        self.assertEqual(result, 'foo')
 
 
 ##

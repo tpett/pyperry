@@ -113,7 +113,7 @@ class AbstractAdapter(object):
         """
         if self._stack: return self._stack
 
-        self._stack = getattr(self, self.mode)
+        self._stack = self.execute
         stack_items = copy(self.processors) + copy(self.middlewares)
         stack_items.reverse()
 
@@ -138,6 +138,10 @@ class AbstractAdapter(object):
                     "The adapter stack failed to return an iterable object" )
 
         return result
+
+    def execute(self, **kwargs):
+        """Call read, write, or delete according to the mode kwarg."""
+        return getattr(self, kwargs['mode'])(**kwargs)
 
     def read(self, **kwargs):
         """Read from the datastore with the provided options"""

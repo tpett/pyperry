@@ -121,6 +121,7 @@ class RestfulIntegrationTestCase(unittest.TestCase):
         model = TestModel({'id':1}, False)
         self.assertEqual(model.delete(), True)
         self.assertEqual(model.frozen(), True)
+        self.assertEqual(http_server.last_request()['method'], 'DELETE')
 
     def test_delete_failure(self):
         """should handle a failed delete appropriately"""
