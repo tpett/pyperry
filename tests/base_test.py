@@ -666,34 +666,34 @@ class BaseUnscopedMethodTestCase(BaseScopingTestCase):
 
         self.assertEqual(self.Test.scoped().params['where'], ['bar'])
 
-class BaseDefineScopeMethodTestCase(BaseScopingTestCase):
+class BaseScopeMethodTestCase(BaseScopingTestCase):
 
     def test_class_method(self):
         """should be a class method"""
-        self.assertEqual(self.Test.define_scope.im_self.__name__, 'Test')
+        self.assertEqual(self.Test.scope.im_self.__name__, 'Test')
 
     def test_accepts_dictionary(self):
         """should accept a name then a dictionary of finder options"""
-        self.Test.define_scope('foo', {'where': 'foo'})
+        self.Test.scope('foo', {'where': 'foo'})
         self.assertEqual(self.Test.foo().params['where'], ['foo'])
 
     def test_accepts_relation(self):
         """should accept a name then a Relation instance for this class"""
-        self.Test.define_scope('foo', self.Test.relation().where('foo'))
+        self.Test.scope('foo', self.Test.relation().where('foo'))
         self.assertEqual(self.Test.foo().params['where'], ['foo'])
 
     def test_accepts_function(self):
         """should allow function returning a relation or dictionary"""
-        def scope(cls):
+        def scope1(cls):
             return cls.where('foo')
 
         def scope2(cls):
             return { 'where': 'bar' }
 
-        self.Test.define_scope(scope)
-        self.assertEqual(self.Test.scope().params['where'], ['foo'])
+        self.Test.scope(scope1)
+        self.assertEqual(self.Test.scope1().params['where'], ['foo'])
 
-        result = self.Test.define_scope(scope2)
+        result = self.Test.scope(scope2)
         self.assertEqual(self.Test.scope2().params['where'], ['bar'])
 
     def test_function_accepting_arguments(self):
@@ -701,41 +701,36 @@ class BaseDefineScopeMethodTestCase(BaseScopingTestCase):
         def scope(cls, name, **blah):
             return cls.where("name like '%s'" % name).where(blah['foo'])
 
-        self.Test.define_scope(scope)
+        self.Test.scope(scope)
         self.assertEqual(self.Test.scope('FOO', foo='bar').params['where'],
                 ["name like 'FOO'", 'bar'])
 
     def test_accepts_named_lambda(self):
         """should accept lambda as second parameter"""
-        self.Test.define_scope('foo', lambda(cls): {'where': 'baz'})
+        self.Test.scope('foo', lambda(cls): {'where': 'baz'})
         self.assertEqual(self.Test.foo().params['where'], ['baz'])
 
     def test_accepts_kwargs(self):
         """should accept a name then a list of kwargs finder_options"""
-        self.Test.define_scope('foo', where='foo')
+        self.Test.scope('foo', where='foo')
         self.assertEqual(self.Test.foo().params['where'], ['foo'])
 
     def test_name_of_func_should_be_passed_name(self):
         """should set __name__ on return value"""
-        scope = self.Test.define_scope('foo', where='foo')
+        scope = self.Test.scope('foo', where='foo')
         self.assertEqual(scope.__name__, 'foo')
 
     def test_scopes_list(self):
         """should append scope to the scopes list"""
-        scope = self.Test.define_scope('foo', where='bar')
+        scope = self.Test.scope('foo', where='bar')
         self.assertEqual(self.Test.scopes.get('foo'), scope)
 
     def test_scopes_method_access(self):
         """should allow access to a method for this scope on the class"""
-        self.Test.define_scope('foo', where='baz')
+        self.Test.scope('foo', where='baz')
         self.assertTrue(hasattr(self.Test, 'foo'))
         rel = self.Test.foo()
         self.assertEqual(rel.params['where'], ['baz'])
-
-
-    def test_alias_scope(self):
-        """should be aliased as `scope`"""
-        self.assertEqual(self.Test.define_scope, self.Test.scope)
 
 ##
 # Saving and Deleting
@@ -786,17 +781,13 @@ class BaseUpdateAttributesMethodTestCase(BasePersistenceTestCase):
 
 
 ##
-# destroy method
+# delete method
 #
-class BaseDestroyMethodTestCase(BasePersistenceTestCase):
+class BaseDeleteMethodTestCase(BasePersistenceTestCase):
 
     def test_instance_method(self):
         """should be an instance method"""
-        self.assertEqual(self.Test.destroy.im_class, self.Test)
-
-    def test_alias(self):
-        """should be aliased as delete"""
-        self.assertEqual(self.test.delete, self.test.destroy)
+        self.assertEqual(self.Test.delete.im_class, self.Test)
 
     def test_raise_when_new_record(self):
         """should raise when attempting to delete a new record"""

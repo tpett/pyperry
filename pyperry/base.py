@@ -472,7 +472,7 @@ class Base(object):
 
         return self.save()
 
-    def destroy(self):
+    def delete(self):
         """
         Removes this model from the data store
 
@@ -497,10 +497,10 @@ class Base(object):
 
         return self.adapter('write')(model=self, mode='delete').success
 
-    delete = destroy
     #}
 
     def reload(self):
+        """Refetch the attributes for this object from the read adapter"""
         pk_condition = {self.pk_attr(): self.pk_value()}
         relation = self.scoped().where(pk_condition).fresh()
         self.attributes = relation.first().attributes
@@ -771,7 +771,7 @@ class Base(object):
             cls._scoped_methods = current_scopes
 
     @classmethod
-    def define_scope(cls, name_or_func, *args, **kwargs):
+    def scope(cls, name_or_func, *args, **kwargs):
         """
         Defines a scope on the given model.
 
@@ -847,7 +847,6 @@ class Base(object):
         setattr(cls, name, types.MethodType(scope, cls, cls.__class__))
 
         return scope
-    scope = define_scope
     #}
 
     #{ Association Declaration
