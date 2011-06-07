@@ -5,18 +5,25 @@ from pyperry.relation import Relation
 
 class Association(object):
     """
+    Associations
+    ============
+
     Associations allow you to retrieve a model or collection of models that are
     related to one another in some way. Here we are concerned with how
     associations are defined and implemented. For documentation on how to use
-    associations in your models, please see the belongs_to, has_one, and
-    has_many methods on pyperry.Base.
+    associations in your models, please see the L{belongs_to
+    <pyperry.Base.belongs_to>}, L{has_one <pyperry.Base.has_one>}, and
+    L{has_many <pyperry.Base.has_many>} methods on L{pyperry.Base}.
+
+    Terminology
+    -----------
 
     To understand how associations work, we must define the concepts of a
     source class and a target class for an association.
 
-    target class - the class on which you define the association
-    source class - the class of the records returned by calling the association
-                   method on the target class
+        - B{target class}: the class on which you define the association
+        - B{source class}: the class of the records returned by calling the
+          association method on the target class
 
     An example showing the difference between source and target classes::
 
@@ -30,41 +37,44 @@ class Association(object):
         Part.belongs_to('car', class_name='Car')
 
         c = Car.first()
-        # returns a collection of Part instances (Part is the source class)
+        # returns a collection of Part models (Part is the source class)
         c.parts()
 
-        p = Part().first()
-        # returns an instance of Car (Car is the source class)
+        p = Part.first()
+        # returns a Car model (Car is the source class)
         p.car()
 
+    What happens when you define an association
+    -------------------------------------------
+
     Now let's look at what happens when you define an association on a model.
-    We will use the association Car.has_many('parts', class_name='Part') as an
-    example because all associations work in the same general way. In this
-    example, a HasMany class (an Association subclass) is instantiated where
-    Car is given as the target_klass argument, and 'parts' is given as the id
-    argument. Because we passed in 'Part' for the class_name option, it is used
-    as the source class for this association.
+    We will use the association C{Car.has_many('parts', class_name='Part')} as
+    an example because all associations work in the same general way. In this
+    example, a C{HasMany} class (an C{Association} subclass) is instantiated
+    where C{Car} is given as the C{target_klass} argument, and C{'parts'} is
+    given as the C{id} argument. Because we passed in C{'Part'} for the
+    C{class_name} option, it is used as the source class for this association.
 
-    The association id is used to name association method that gets defined on
-    the target class. So in our example, all Car instances now have a parts()
-    method they can call to retrieve a collection of parts for that car. When
-    you call the association method on the target class, a relation (or scope)
-    is constructed for the source class representing all of the records related
-    to the target class. For associations that represent collections, such as
-    has_many, a relation is returned that you can further modify. For
-    associations that represent a single object, such as belongs_to or has_one,
-    an instance of that model is returned.
+    The association id is used as the name of the association method that gets
+    defined on the target class. So in our example, all C{Car} instances now
+    have a C{parts()} method that can be called to retrieve a collection of
+    parts for a car. When you call the association method on the target class,
+    a relation (or scope) is constructed for the source class representing all
+    of the records related to the target class. For associations that represent
+    collections, such as C{has_many}, a relation is returned that you can
+    further modify. For associations that represent a single object, such as
+    C{belongs_to} or C{has_one}, an instance of that model is returned.
 
-    In summarry, all associations do is create scopes on source classes that
-    represent records from the source class that are related to (or associated
-    with) a target class. Then this scope is packaged as a convenient, easy to
-    use, easy to remember method on the target class.
+    In summary, all an association does is create a scope on the source class
+    that represents records from the source class that are related to (or
+    associated with) the target class. Then a method on the target class is
+    created that returns this scope.
 
-    This means that calling car.parts() is just returning a scope like::
+    This means that calling C{car.parts()} is just returning a scope like::
 
         Part.scoped().where({'car_id': car.id})
 
-    Similarly, calling part.car() is just returning a scope like::
+    Similarly, calling C{part.car()} is just returning a scope like::
 
         Car.scoped().where({'id': part.car_id}).first()
 
@@ -192,6 +202,11 @@ class Association(object):
         return re.sub('[^a-zA-z]\w*', '', string)
 
 class BelongsTo(Association):
+    """
+    Builds the association scope for a C{belongs} association. See the
+    L{Association} class for more details on how associations work.
+
+    """
 
     def type(self):
         return 'belongs_to'
@@ -239,6 +254,15 @@ class BelongsTo(Association):
             })
 
 class Has(Association):
+    """
+    Builds the association scope for a C{has} association. This is the
+    superclass for L{HasOne} and L{HasMany} associations. The only difference
+    between a has one and has many relation, is that C{.first()} is called on
+    the has one association's scope but not on the has many association's
+    scope. See the L{Association} class for more details on how associations
+    work.
+
+    """
 
     # Foreign key attributes
     def get_foreign_key(self):
@@ -299,6 +323,11 @@ class Has(Association):
             return scope
 
 class HasMany(Has):
+    """
+    The C{HasMany} class simply declares that the L{Has} association is a
+    collection of type C{'has_many'}.
+
+    """
 
     def type(self):
         return 'has_many'
@@ -307,6 +336,11 @@ class HasMany(Has):
         return True
 
 class HasOne(Has):
+    """
+    The C{HasOne} class simply declares that the L{Has} association is a
+    not a collection and has a type of C{'has_one'}.
+
+    """
 
     def type(self):
         return 'has_one'
@@ -315,6 +349,62 @@ class HasOne(Has):
         return False
 
 class HasManyThrough(Has):
+    """
+    The C{HasManyThrough} class is used whenever a C{has_many} association is
+    created with the C{through} option. It works by using the association id
+    given with the through option as a I{proxy} association to another class
+    on which a I{source} association is defined. The source class for a has
+    many through association will be the source class of the source
+    association. This means that the scope for a has many through association
+    is actually two scopes chained together. The proxy scope is used to
+    retrieve the records on which to build the source association, which is
+    used to build a scope for the records represented by the has many through
+    association. The proxy and source associations may be any of the simple has
+    or belongs to association types.
+
+    B{Options specific to has many through associations}
+
+        - B{through}: the association id of an association defined on the
+          target class. This association will be used as the proxy association,
+          and it is an error if this association does not exist.
+
+        - B{source}: the id of the source association. If the source option is
+          not specified, we assume that the source association's id is the same
+          as the has many through association's id.
+
+        - B{source_type}: the name of the source class as a string. This option
+          may be required if the source class is ambiguous, such as when the
+          source association is a polymorphic belongs_to association.
+
+    B{Has many through example}
+
+    This example shows how to create a basic has many through relationship in
+    which the internet has many connected devices through its networks. The has
+    many through association is defined on the Internet class. Notice how the
+    proxy association, C{networks}, is defined on the target class,
+    C{Internet}, and the source association, C{devices}, is defined on the
+    proxy association's source class, C{Network}. Therefore, the source class
+    for the entire relation is the source association's source class,
+    C{Device}::
+
+        class Internet(pyperry.Base):
+            def _config(cls):
+                cls.attributes('id')
+                cls.has_many('connected_devices', through='networks', source='devices')
+                cls.has_many('networks', class_name='Network')
+
+        class Network(pyperry.Base):
+            def _config(cls):
+                cls.attributes('id', 'internet_id')
+                cls.belongs_to('internet', class_name='Internet')
+                cls.has_many('devices', class_name='Device')
+
+        class Device(pyperry.Base):
+            def _config(cls):
+                cls.attributes('id', 'network_id')
+                cls.belongs_to('network', class_name='Network')
+
+    """
 
     def type(self):
         return 'has_many_through'

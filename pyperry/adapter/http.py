@@ -12,6 +12,44 @@ ERRORS = {
 }
 
 class RestfulHttpAdapter(AbstractAdapter):
+    """
+    Adapter for communicating with REST web services over HTTP
+
+    B{Required configuration keywords:}
+
+        - B{host:} the host of the remote server, such as C{github.com} or
+          C{192.0.0.1}
+
+        - B{service:} the name of the service corresponding to your model.
+
+          The service will depend on what services the host server has
+          available, but it is typically the lowercase, plural version of your
+          model's class name.  So if you have a model named C{Duck}, your
+          service name will typically be C{ducks}.
+
+    B{Optional configuration keywords:}
+
+        - B{format}: expected data format of the response body, such as
+          C{'xml'} or C{'csv'}. Default is C{'json'}
+
+        - B{primary_key}: an alternate primary_key to use when generating URLs.
+          Defaults to C{model.pk_attr()}
+
+        - B{params_wrapper:} used to wrap your model's attributes before encoding
+          them for your request.
+
+          For example, if you have a model C{m = Model({'id': 4, 'name':
+          'foo'})} with C{params_wrapper='mod'}, the data encoded for the HTTP
+          request will include C{mod[id]=4&mod[name]=foo}
+
+        - B{default_params}: a python dict of additional paramters to include
+          alongside the models attributes in any write or delete request.
+
+          These parameters will not be wrapped in the C{params_wrapper} if that
+          option is also present. One thing C{default_params} are useful for
+          is including an api key with every request.
+
+    """
 
     def read(self, **kwargs):
         """

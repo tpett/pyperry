@@ -15,6 +15,107 @@ class DelayedMerge(object):
         return self.obj.merge(self.func(*args, **kwargs))
 
 class Relation(object):
+    """
+    Relations
+    =========
+
+    The C{Relation} class represents an abstract query for a data store. It
+    provides a set of query methods and a set of finder methods that allow you
+    to build and execute a query respectively.  While the method names and
+    terminology used in this class are representative of SQL queries, the
+    resulting query may be used for non-SQL data stores given that an
+    appropriate adapter has been written for that data store.
+
+    Method delgation
+    ----------------
+
+    L{pyperry.Base} delegates any calls to query methods or finder methods to a
+    pre-initialized C{Relation} class. That means that if you have a Person
+    model, instead of having to write C{Relation(Person).order('last_name')}
+    to create a relation, you can simply write C{Person.order('last_name')}.
+
+    Method chaining
+    ---------------
+
+    All query methods can be chained. That means that every query method
+    returns a new C{Relation} instance that is a copy of the old relation
+    relation merged with the result of calling the current query method. This
+    saves a lot of typing when writing longer queries like
+    C{Person.order('last_name').limit(10).offset(100).where({'age':
+    24}).all()}. Once you call one of the finder methods, the query gets
+    executed and the result of that query is returned, which breaks the method
+    chain.
+
+    Query methods
+    -------------
+
+    There are two kinds of query methods: singular and plural. Singular query
+    methods only store one value in the underlying relation, so succesive calls
+    to a singular query method overwrite the old value with the new value. Plural
+    query methods may have multiple values, so successive calls to a plural
+    query method append or merge the old value with the new value so that all
+    values are present in the resulting query. Please note that not all query
+    methods will apply to all data stores.
+
+    Singular query methods
+    ~~~~~~~~~~~~~~~~~~~~~~
+
+        - B{limit:} (int) limit the number of records returned by the data
+          store to the value specified
+        - B{offset:} (int) exclude the first N records from the result where
+          N is the value passed to offset
+        - B{from:} (string) specify the source of the records within the data
+          store, such as a table name in a SQL database
+        - B{from_:}  alias of C{from}
+
+    Plural query methods
+    ~~~~~~~~~~~~~~~~~~~~
+
+        - B{select:} (string) only include the given attributes in the
+          resulting records
+        - B{where:} (string, dict) specify conditions that the records must
+          meet to be included in the result
+        - B{order:} (string) order the records by the given values
+        - B{joins:} (string) a full SQL join clause
+        - B{includes:} (string, dict) L{eager load <PreloadAssociations>} any
+          associations matching the given values. Include values may be nested
+          in a dict.
+        - B{conditions:} alias of C{where}
+        - B{group:} (string) group the records by the given values
+        - B{having:} (string) specify conditions that apply only to the group
+          values
+        - B{modifiers:} (dict) include any additional information in the
+          relation. Modfiers allow you to include data in your queries that may
+          be useful to a L{processor or
+          middleware<pyperry.adapter.abstract_adapter>} you write. The
+          modifiers value is not included in the dictionary returned by the
+          L{query} method, so the modifiers will not be passed on to the data
+          store.
+
+    Finder methods
+    ==============
+
+        - B{L{first}:} return all records represented by the current relation
+        - B{L{all}:} return only the first record represented by the currennt
+          relation
+
+    Finder options
+    ==============
+
+    The finder methods will also accept a dictionary or keyword arguments
+    that specify a query without you having to actually call the query methods.
+    The keys should be named the same as the corresponding query methods and
+    the values should be the same values you would normally pass to those query
+    methods. For example, the following to queries are equivalent::
+
+        Person.order('last_name').limit(10).all()
+        Person.all({'order': 'last_name', 'limit': 10})
+
+    Some other methods also accept finder options as a dictionary or keyword
+    arguments such as the C{scope} method and association methods on
+    L{pyperry.Base}. 
+
+    """
 
     singular_query_methods = ['limit', 'offset', 'from', 'sql']
     plural_query_methods = ['select', 'group', 'order', 'joins', 'includes',

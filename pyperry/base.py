@@ -206,7 +206,7 @@ class Base(object):
     C{new_record} attribute.  This changes the behavior of the save operation.
     A "new" record is created and a "stored" record is updated.  Also, a "new"
     record cannot be deleted as it does not yet exist in the database.  See the
-    individual persistence methods for more information
+    individual L{persistence methods<save>} for more information
 
     Scopes
     ======
@@ -273,8 +273,8 @@ class Base(object):
     you to apply query methods and scopes to the association before executing
     the query.
 
-    For more information on Associations see the individual Association
-    methods.
+    For more information on Associations see the individual L{association
+    methods<belongs_to>}.
 
     """
 
@@ -426,7 +426,16 @@ class Base(object):
 
     def save(self):
         """
-        Save the current state of the model through the write adapter
+        Save the current value of the model's data attributes through the write
+        adapter.
+
+        If the save succeeds, the model's C{saved} attribute will be set to
+        True. Also, if a read adapter is configured, the models data attributes
+        will be refreshed to ensure that you have the current values.
+
+        If the save fails, the model's C{errors} will be set to a
+        dictionary containing error messages and the C{saved} attribute will be
+        set to False.
 
         @return: Returns C{True} on success or C{False} on failure
 
@@ -465,10 +474,15 @@ class Base(object):
 
     def destroy(self):
         """
-        Calls write adapter with delete keyword True.
+        Removes this model from the data store
 
-        The result of this is dependent on the adapter used, but conventionally
-        it removes the current record from the data store.
+        If the call succeeds, the model will be marked as frozen and calling
+        C{frozen} on the model will return True. Once a model is frozen, an
+        exception will be raised if you attempt to call one of the persistence
+        methods on it.
+
+        If the call fails, the model's C{errors} attribute will be set to a
+        dictionary of error messages describing the error.
 
         @return: C{True} on success or C{False} on failure
 
@@ -849,7 +863,7 @@ class Base(object):
         it was eager loaded), it will return the cached result.
 
         In addition to keywords listed below this method also accepts all of
-        the query finder options specified on (TODO: Insert Link)
+        the query finder options specified on L{Relation}
 
         @param id: name of the association
         @keyword class_name: Unambiguous name (string) of source class
@@ -883,7 +897,7 @@ class Base(object):
         query before executing (e.g.  person.addresses().primary()).
 
         In addition to keywords listed below this method also accepts all of
-        the query finder options specified on (TODO: Insert Link)
+        the query finder options specified on L{Relation}
 
         @param id: name of the association
         @keyword class_name: Unambiguous name (string) of source class
@@ -915,7 +929,7 @@ class Base(object):
         loaded), it will return the cached result.
 
         In addition to keywords listed below this method also accepts all of
-        the query finder options specified on (TODO: Insert Link)
+        the query finder options specified on L{Relation}
 
         @param id: name of the association
         @keyword class_name: Unambiguous name (string) of source class

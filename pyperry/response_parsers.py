@@ -2,11 +2,11 @@ import simplejson as json
 
 class ResponseParser(object):
     """
-    Base class for all response parsers
+    This is the base class for all response parsers.
 
-    All subclasses should implement the parse method. To make your parser
-    available to the Response class, you must add it to the Response.PARSERS
-    dictionary using the format as the key.
+    All subclasses should implement the C{parse} method. To make your parser
+    available to the L{Response} class, you must add it to the
+    C{Response.PARSERS} dict using the format ('json', 'xml', etc.) as the key.
 
     """
     def parse(self, raw_str):
@@ -18,5 +18,10 @@ class ResponseParser(object):
 
 
 class JSONResponseParser(ResponseParser):
+    """
+    A L{ResponseParser} for reponses in JSON format C{(format='json')}.
+
+    """
+
     def parse(self, raw_str):
         return json.loads(raw_str)

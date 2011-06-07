@@ -1,6 +1,30 @@
 from pyperry.errors import ConfigurationError
 
 class ModelBridge(object):
+    """
+    The C{ModelBridge} class is positioned between the processors and
+    middlewares in the L{adapter's request/response call stack
+    <AbstractAdapter>}. Before the response from an adapter call reaches the
+    C{ModelBridge}, the middlewares can only reliable work with the raw
+    response data. After the C{ModelBridge} handles the response, the
+    processors that follow can now operate on model instances (subclasses of
+    C{pyperry.Base}) instead of the raw response data.
+
+    On adapter reads, the C{ModelBridge} takes the list of records returned by
+    the adapter call and creates a model instance of the appropriate type for
+    each record in the list.
+
+    On adapter writes and deletes, the C{ModelBridge} class updates the state
+    of the model instance being saved or deleted to reflect
+    the data stored in the Response object returned by the adapter call. This
+    includes things like updating a model's C{saved} and C{new_record}
+    attributes in addition to putting error messages on the model if the
+    adapter received an error response. Additionally, the C{ModelBridge} will
+    refresh all of the model's data attributes (specified by calling
+    C{pyperry.Base.attributes(...)}) after a successful write if a read adapter
+    is configured for the model.
+
+    """
 
     def __init__(self, next, options={}):
         self.next = next
@@ -28,6 +52,7 @@ class ModelBridge(object):
         return records
 
     def handle_write(self, response, **kwargs):
+        """Updates a model after a save."""
         if 'model' in kwargs:
             model = kwargs['model']
             if response.success:
