@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version='0.0.1'
+version='0.1.0'
 
 setup(
     name='pyperry',
@@ -16,9 +16,9 @@ setup(
     download_url='http://pypi.python.org/packages/source/p/pyperry/pyperry-%s.tar.gz' % version,
     install_requires=[
         'erlastic==1.0.0',
-        'bert==1.0.0',
-        'bertrpc>0',
-        'simplejson>0'
+        'bert>=1.0.0,<=1.1.0',
+        'bertrpc>=1.0.0,<=1.1.0',
+        'simplejson>=1.1,<=2.0'
     ],
     classifiers = [
             'Development Status :: 4 - Beta',
