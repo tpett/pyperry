@@ -250,7 +250,7 @@ class BelongsTo(Association):
 
         if keys is not None:
             return self._base_scope(obj_or_list).where({
-                self.primary_key(): keys
+                self.primary_key(obj_or_list): keys
             })
 
 class Has(Association):

@@ -155,8 +155,12 @@ class BelongsToTestCase(BaseAssociationTestCase):
         """should return true for polymorphic if polymorphic options specified
         and false otherwise"""
         self.assertFalse(self.belongs_to.polymorphic())
-        belongs = BelongsTo(self.klass, 'bar', polymorphic=True)
+        belongs = BelongsTo(self.comment, 'parent', polymorphic=True)
         self.assertTrue(belongs.polymorphic())
+        comment = self.comment({ 'parent_id': 1, 'parent_type': 'Article' })
+        scope = belongs.scope(comment)
+        self.assertEqual(scope.__class__, pyperry.Relation)
+
 
     def test_polymorphic_type(self):
         """should return #{id}_type if it is polymorphic"""
