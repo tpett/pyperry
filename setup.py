@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version='0.1.0'
+version='0.1.1'
 
 setup(
     name='pyperry',
@@ -17,7 +17,7 @@ setup(
     install_requires=[
         'erlastic==1.0.0',
         'bert>=1.0.0,<=1.1.0',
-        'bertrpc>=1.0.0,<=1.1.0',
+        'bertrpc>=0.1.1,<0.2.0',
         'simplejson>=1.1,<=2.0'
     ],
     classifiers = [
