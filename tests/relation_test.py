@@ -48,6 +48,33 @@ class InitTestCase(BaseRelationTestCase):
         assert(isinstance(self.relation, Relation))
         self.assertEqual(self.relation.klass, self.Test)
 
+##
+# Test the clone method
+#
+class CloneTestCase(BaseRelationTestCase):
+
+    def test_return_relation_copy(self):
+        """Should return a copy of the relation object"""
+        rel = self.relation.where({ 'id': 1 })
+        cloned = rel.clone()
+
+        self.assertEqual(type(cloned), Relation)
+        self.assertEqual(cloned.query(), rel.query())
+
+    def test_removes_reords(self):
+        """should remove any cached query records"""
+        self.relation.fetch_records()
+        cloned = self.relation.clone()
+        self.assertEqual(cloned._records, None)
+
+    def test_removes_query(self):
+        """should remove any cached query dict"""
+        rel =  self.relation.where({ 'id': 1 })
+        rel.fetch_records()
+        cloned = rel.clone()
+        self.assertEqual(cloned._query, None)
+
+
 
 ##
 # Test the building of the request dictionary

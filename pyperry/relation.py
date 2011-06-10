@@ -113,7 +113,7 @@ class Relation(object):
 
     Some other methods also accept finder options as a dictionary or keyword
     arguments such as the C{scope} method and association methods on
-    L{pyperry.Base}. 
+    L{pyperry.Base}.
 
     """
 
@@ -384,7 +384,13 @@ class Relation(object):
         setattr(self.__class__, key, method)
 
     def clone(self):
-        return deepcopy(self)
+        cloned = deepcopy(self)
+        cloned.reset()
+        return cloned
+
+    def reset(self):
+        self._records = None
+        self._query = None
 
     def __repr__(self):
         return repr(self.fetch_records())
