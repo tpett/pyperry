@@ -10,7 +10,9 @@ from tests.fixtures.test_adapter import TestAdapter
 import tests.fixtures.association_models
 
 class BaseTestCase(unittest.TestCase):
-    pass
+
+    def tearDown(self):
+        TestAdapter.reset()
 
 ##
 # Test the interfaces for defining attributes on pyperry.Base
@@ -485,6 +487,23 @@ class BaseComparisonTestCase(BaseTestCase):
         test1 = self.Test({ 'id': 1, 'name': 'Poop Head' })
         test2 = self.Test2({ 'id': 1, 'name': 'Poop Head' })
         self.assertNotEqual(test1, test2)
+
+
+class BaseInheritanceTestCase(BaseTestCase):
+
+    def setUp(self):
+        self.base_article = tests.fixtures.association_models.Article
+        class MyArticle(self.base_article):
+            pass
+        self.sub_article = MyArticle
+        TestAdapter.data = { 'id': 1 }
+
+    def test_article_subclass_behavior(self):
+        """subclass should behave like base class"""
+        print self.base_article.defined_attributes
+        print self.sub_article.defined_attributes
+        self.assertEqual(self.sub_article.first().attributes,
+                self.base_article.first().attributes)
 
 
 ##

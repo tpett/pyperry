@@ -50,13 +50,17 @@ class BaseMeta(type):
             new.adapter_config = {}
 
         # Create a default primary_key value
-        new._primary_key = 'id'
+        if not hasattr(new, '_primary_key'):
+            new._primary_key = 'id'
 
         # Create fresh adapter dict
         new._adapters = {}
 
         # Define any attributes set during class definition
-        new.defined_attributes = set()
+        if not hasattr(new, 'defined_attributes'):
+            new.defined_attributes = set()
+        else:
+            new.defined_attributes = deepcopy(new.defined_attributes)
 
         # Define any associations set during class definition
         if not hasattr(new, 'defined_associations'):
