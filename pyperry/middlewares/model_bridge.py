@@ -34,9 +34,6 @@ class ModelBridge(object):
         results = self.next(**kwargs)
         mode = kwargs['mode']
 
-        print "ModelBridge: %s" % repr(kwargs)
-        print "Results: %s" % repr(results)
-
         if mode == 'read':
             results = self.handle_read(results, **kwargs)
         elif mode == 'write':
@@ -51,7 +48,6 @@ class ModelBridge(object):
         """Create perry.Base instances from the raw records dictionaries."""
         if 'relation' in kwargs:
             relation = kwargs['relation']
-            print relation.klass({ 'id': 1 }, False)
             records = [relation.klass(record, False)
                        for record in records if record]
         return records
