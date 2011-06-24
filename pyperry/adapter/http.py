@@ -244,7 +244,7 @@ class RestfulHttpAdapter(AbstractAdapter):
             elif isinstance(value, list):
                 self.params_for_list(value, params_list, new_key_prefix)
             else:
-                params_list.append((new_key_prefix, value))
+                params_list.append((new_key_prefix, self.params_value(value)))
 
         return params_list
 
@@ -255,7 +255,7 @@ class RestfulHttpAdapter(AbstractAdapter):
             elif isinstance(value, list):
                 self.params_for_list(value, params_list, key_prefix + '[]')
             else:
-                params_list.append((key_prefix, value))
+                params_list.append((key_prefix, self.params_value(value)))
 
     def key_for_params(self, key, value, key_prefix=''):
         if len(key_prefix) > 0:
@@ -267,3 +267,8 @@ class RestfulHttpAdapter(AbstractAdapter):
             new_key_prefix += '[]'
 
         return new_key_prefix
+
+    def params_value(self, value):
+        if value is None:
+            value = ''
+        return value
