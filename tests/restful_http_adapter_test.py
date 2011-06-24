@@ -340,6 +340,13 @@ class RestfulParamsTestCase(HttpAdapterTestCase):
         expected.sort()
         self.assertEqual(actual, expected)
 
+    def test_none_values(self):
+        """Should replace None values with an empty string"""
+        input = {'foo': None}
+        expected = [('foo', '')]
+        actual = self.adapter.restful_params(input)
+        self.assertEqual(actual, expected)
+
     def test_multiply_nested_dict(self):
         """should flatten keys from multiply nested dicts"""
         input = {
