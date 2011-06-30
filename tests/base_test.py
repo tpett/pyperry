@@ -86,6 +86,20 @@ class InitializeTestCase(BaseTestCase):
         t = self.Test({})
         self.assertEqual(t.errors, {})
 
+    def test_init_with_no_args(self):
+        t = self.Test()
+        self.assertEqual(t.id, None)
+
+    def test_init_with_kwargs(self):
+        t = self.Test(name='test')
+        self.assertEqual(t.name, 'test')
+
+    def test_init_with_attributes_and_kwargs(self):
+        t = self.Test({'id': 3}, False, name='test')
+        self.assertEqual(t.id, 3)
+        self.assertEqual(t.name, 'test')
+
+
 
 ##
 # Configurable primary keys
@@ -593,7 +607,7 @@ class BaseRelationQueryMethodTestCase(BaseScopingTestCase):
 
     def test_all_finder_methods(self):
         """test finder methods on Relation accessible from Base"""
-        methods = ['all', 'first']
+        methods = ['all', 'first', 'find']
 
         for method in methods:
             result = getattr(self.Test, method)

@@ -1,4 +1,5 @@
 from copy import copy, deepcopy
+from pyperry.errors import ArgumentError, RecordNotFound
 
 class DelayedMerge(object):
     """
@@ -41,10 +42,9 @@ class Relation(object):
     returns a new C{Relation} instance that is a copy of the old relation
     relation merged with the result of calling the current query method. This
     saves a lot of typing when writing longer queries like
-    C{Person.order('last_name').limit(10).offset(100).where({'age':
-    24}).all()}. Once you call one of the finder methods, the query gets
-    executed and the result of that query is returned, which breaks the method
-    chain.
+    C{Person.order('last_name').limit(10).offset(100).where(age=24).all()}
+    Once you call one of the finder methods, the query gets executed and the
+    result of that query is returned, which breaks the method chain.
 
     Query methods
     -------------
@@ -168,21 +168,57 @@ class Relation(object):
         return len(self.fetch_records())
 
 
-    def first(self, options={}):
+    def first(self, options={}, **kwargs):
         """Apply a limit scope of 1 and return the resulting singular value"""
         options.update({ 'limit': 1 })
-        return self.all(options)[0]
+        records = self.all(options, **kwargs)
+        if len(records) < 1:
+            raise RecordNotFound('could not find a record for %s' %
+                    self.klass.__name__)
+        return records[0]
 
-    def all(self, options={}):
+    def all(self, options={}, **kwargs):
         """
         Apply any finder options passed and execute the query returning the
         list of records
         """
-        return self.apply_finder_options(options).fetch_records()
+        return self.apply_finder_options(options, **kwargs).fetch_records()
 
-    def apply_finder_options(self, options):
+    def find(self, pks_or_mode, options={}, **kwargs):
+        """
+        Returns a record or list of records matching the primary key or array
+        of primary keys given as its first argument. If the first argument is
+        one of 'first' or 'all', the C{first} or C{all} finder methods
+        respectively are called with the given finder options from the second
+        argument.
+        """
+        if pks_or_mode == 'all':
+            return self.all(options, **kwargs)
+        elif pks_or_mode == 'first':
+            return self.first(options, **kwargs)
+        elif isinstance(pks_or_mode, list):
+            result = self.where({self.klass.primary_key(): pks_or_mode})
+            if len(result) < len(pks_or_mode):
+                raise RecordNotFound(
+                        self._record_not_found_message(pks_or_mode, result))
+            return result
+        elif isinstance(pks_or_mode, str) or isinstance(pks_or_mode, int):
+            return self.where({self.klass.primary_key(): pks_or_mode}).first()
+        else:
+            raise ArgumentError('unkown arguments for find method')
+
+    def _record_not_found_message(self, pk_array, results):
+        err = "Couldn't find %s records for all primary key values in %s. "
+        err += "(expected %d records but only found %d)"
+        n = len(pk_array)
+        m = len(results)
+        return err % (self.klass.__name__, str(pk_array), n, m)
+
+    def apply_finder_options(self, options={}, **kwargs):
         """Apply given dictionary as finder options returning a new relation"""
         self = self.clone()
+        options = copy(options)
+        options.update(kwargs)
 
         valid_methods = (
                 self.singular_query_methods +
@@ -372,12 +408,14 @@ class Relation(object):
         functionality you can create a explicit method that will shadow this
         implementation.  These methods will be created dynamically at runtime.
         """
-        def method(self, *value):
+        def method(self, *value, **kwargs):
             self = self.clone()
             # If they are passing in a list rather than a tuple
             if len(value) == 1 and isinstance(value[0], list):
                 value = value[0]
             self.params[key] += list(value)
+            if len(kwargs) > 0:
+                self.params[key].append(kwargs)
             return self
 
         method.__name__ = key

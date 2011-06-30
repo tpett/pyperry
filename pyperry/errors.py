@@ -24,3 +24,6 @@ class AssociationNotFound(Exception):
 
 class AssociationPreloadNotSupported(Exception):
     pass
+
+class RecordNotFound(Exception):
+    pass
