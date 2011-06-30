@@ -284,13 +284,14 @@ class Base(object):
 
     __metaclass__ = BaseMeta
 
-    def __init__(self, attributes, new_record=True):
+    def __init__(self, attributes={}, new_record=True, **kwargs):
         """
         Initialize a new pyperry object with attributes
 
         Uses C{attributes} dictionary to set attributes on a new instance.
         Only keys that have been defined for the model will be set.  Defaults
-        to a new record but can be overriden with C{new_record} param
+        to a new record but can be overriden with C{new_record} param. You can
+        also use C{kwargs} to specify the attributes.
 
         @param attributes: dictionary of attributes to set on the new instance
         @param new_record: set new_record flag to C{True} or C{False}.
@@ -298,6 +299,7 @@ class Base(object):
         """
         self.attributes = {}
         self.set_attributes(attributes)
+        self.set_attributes(kwargs)
         self.new_record = new_record
         self.saved = None
         self.errors = {}
