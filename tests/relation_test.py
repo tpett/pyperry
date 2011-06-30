@@ -245,6 +245,21 @@ class QueryMethodsTestCase(BaseRelationTestCase):
             self.assertEqual(relation.params[method_name], ['foo', 'baz'])
             self.assertEqual(self.relation.params[method_name], [])
 
+    def test_plural_query_methods_accept_kwargs(self):
+        """plural query methods should accept kwargs one of their values"""
+        for method_name in plural_query_methods:
+            method = getattr(self.relation, method_name)
+
+            relation = method(foo='bar')
+            self.assertEqual(relation.params[method_name], [{'foo': 'bar'}])
+            self.assertEqual(self.relation.params[method_name], [])
+
+            relation = method('foo', 'bar', foo='bar')
+            self.assertEqual(relation.params[method_name],
+                    ['foo', 'bar', {'foo': 'bar'}])
+            self.assertEqual(self.relation.params[method_name], [])
+
+
 
 class IncludesTestCase(BaseRelationTestCase):
 

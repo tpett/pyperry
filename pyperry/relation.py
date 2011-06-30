@@ -42,10 +42,9 @@ class Relation(object):
     returns a new C{Relation} instance that is a copy of the old relation
     relation merged with the result of calling the current query method. This
     saves a lot of typing when writing longer queries like
-    C{Person.order('last_name').limit(10).offset(100).where({'age':
-    24}).all()}. Once you call one of the finder methods, the query gets
-    executed and the result of that query is returned, which breaks the method
-    chain.
+    C{Person.order('last_name').limit(10).offset(100).where(age=24).all()}
+    Once you call one of the finder methods, the query gets executed and the
+    result of that query is returned, which breaks the method chain.
 
     Query methods
     -------------
@@ -407,12 +406,14 @@ class Relation(object):
         functionality you can create a explicit method that will shadow this
         implementation.  These methods will be created dynamically at runtime.
         """
-        def method(self, *value):
+        def method(self, *value, **kwargs):
             self = self.clone()
             # If they are passing in a list rather than a tuple
             if len(value) == 1 and isinstance(value[0], list):
                 value = value[0]
             self.params[key] += list(value)
+            if len(kwargs) > 0:
+                self.params[key].append(kwargs)
             return self
 
         method.__name__ = key
