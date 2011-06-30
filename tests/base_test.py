@@ -593,7 +593,7 @@ class BaseRelationQueryMethodTestCase(BaseScopingTestCase):
 
     def test_all_finder_methods(self):
         """test finder methods on Relation accessible from Base"""
-        methods = ['all', 'first']
+        methods = ['all', 'first', 'find']
 
         for method in methods:
             result = getattr(self.Test, method)

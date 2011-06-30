@@ -1,4 +1,5 @@
 from copy import copy, deepcopy
+from pyperry.errors import ArgumentError, RecordNotFound
 
 class DelayedMerge(object):
     """
@@ -171,7 +172,11 @@ class Relation(object):
     def first(self, options={}):
         """Apply a limit scope of 1 and return the resulting singular value"""
         options.update({ 'limit': 1 })
-        return self.all(options)[0]
+        records = self.all(options)
+        if len(records) < 1:
+            raise RecordNotFound('could not find a record for %s' %
+                    self.klass.__name__)
+        return records[0]
 
     def all(self, options={}):
         """
@@ -179,6 +184,36 @@ class Relation(object):
         list of records
         """
         return self.apply_finder_options(options).fetch_records()
+
+    def find(self, pks_or_mode, options={}):
+        """
+        Returns a record or list of records matching the primary key or array
+        of primary keys given as its first argument. If the first argument is
+        one of 'first' or 'all', the C{first} or C{all} finder methods
+        respectively are called with the given finder options from the second
+        argument.
+        """
+        if pks_or_mode == 'all':
+            return self.all(options)
+        elif pks_or_mode == 'first':
+            return self.first(options)
+        elif isinstance(pks_or_mode, list):
+            result = self.where({self.klass.primary_key(): pks_or_mode})
+            if len(result) < len(pks_or_mode):
+                raise RecordNotFound(
+                        self._record_not_found_message(pks_or_mode, result))
+            return result
+        elif isinstance(pks_or_mode, str) or isinstance(pks_or_mode, int):
+            return self.where({self.klass.primary_key(): pks_or_mode}).first()
+        else:
+            raise ArgumentError('unkown arguments for find method')
+
+    def _record_not_found_message(self, pk_array, results):
+        err = "Couldn't find %s records for all primary key values in %s. "
+        err += "(expected %d but got %d)"
+        n = len(pk_array)
+        m = len(results)
+        return err % (self.klass.__name__, str(pk_array), n, m)
 
     def apply_finder_options(self, options):
         """Apply given dictionary as finder options returning a new relation"""

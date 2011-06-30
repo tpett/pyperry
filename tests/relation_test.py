@@ -1,6 +1,7 @@
 import tests
 import unittest
 import pyperry
+from pyperry import errors
 
 from fixtures.test_adapter import TestAdapter
 
@@ -36,6 +37,10 @@ class BaseRelationTestCase(unittest.TestCase):
 
     def tearDown(self):
         TestAdapter.reset()
+
+    @property
+    def last_call(self):
+        return TestAdapter.calls[-1]
 
 ##
 # Test the init of a relation
@@ -139,6 +144,61 @@ class FetchRecordsTestCase(BaseRelationTestCase):
         """list method should be an alias for fetch_records"""
         self.assertEqual(self.relation.list(), self.relation.fetch_records())
 
+##
+# Test the find method
+#
+class FindMethodTestCase(BaseRelationTestCase):
+
+    def test_primary_key(self):
+        """
+        should accept string or number as query for the primary_key with
+        finder options
+        """
+        self.relation.find(1)
+        self.assertEqual(self.last_call['where'], [{'id': 1}])
+        self.relation.find('1')
+        self.assertEqual(self.last_call['where'], [{'id': '1'}])
+
+    def test_primary_key_array(self):
+        """should accept array of primary keys with finder options"""
+        TestAdapter.data = [{'id': x} for x in range(1, 5)]
+        result = self.relation.find([1,2,3,4])
+        self.assertEqual(self.last_call['where'], [{'id': [1, 2, 3, 4]}])
+        self.assertEqual(len(result), 4)
+
+    def test_all_with_finder_options(self):
+        """should accept 'all' with finder options"""
+        result = self.relation.find('all', {'conditions': 'test'})
+        self.assertEqual(type(result), type([]))
+        self.assertEqual(self.last_call['where'], ['test'])
+
+    def test_first_with_finder_options(self):
+        """should accept 'first' with finder options"""
+        result = self.relation.find('first', {'conditions': 'test'})
+        self.assertTrue(issubclass(type(result), pyperry.Base))
+        self.assertEqual(self.last_call['where'], ['test'])
+
+    def test_argument_error(self):
+        """should raise ArgumentError for wrong usage"""
+        TestAdapter.data = []
+        self.assertRaises(errors.ArgumentError, self.relation.find, 1.5)
+        self.assertRaises(errors.ArgumentError, self.relation.find, {})
+
+    def test_record_not_found(self):
+        """
+        should raise Perry::RecordNotFound when id passed and record could not
+        be found
+        """
+        TestAdapter.data = []
+        self.assertRaises(errors.RecordNotFound, self.relation.find, 1)
+
+    def test_record_not_found_when_array(self):
+        """
+        should raise Perry::RecordNotFound when a set of ids is passed and any
+        record could not be found
+        """
+        TestAdapter.data = [{'id': 2}]
+        self.assertRaises(errors.RecordNotFound, self.relation.find, [1,2,3])
 
 
 ##
