@@ -209,7 +209,7 @@ class Relation(object):
 
     def _record_not_found_message(self, pk_array, results):
         err = "Couldn't find %s records for all primary key values in %s. "
-        err += "(expected %d but got %d)"
+        err += "(expected %d records but only found %d)"
         n = len(pk_array)
         m = len(results)
         return err % (self.klass.__name__, str(pk_array), n, m)
