@@ -553,6 +553,18 @@ class ApplyFinderOptionsTestCase(BaseRelationTestCase):
 
         self.assertEqual(rel.params['where'], [{ 'id': 1 }])
 
+    def test_kwargs(self):
+        rel = self.relation.apply_finder_options(from_='foo', where={'id': 1})
+        self.assertEqual(rel.params['from'], 'foo')
+        self.assertEqual(rel.params['where'], [{'id': 1}])
+
+    def test_options_and_kwargs(self):
+        options = {'from': 'foo'}
+        rel = self.relation.apply_finder_options(options, where={'id': 1})
+        self.assertEqual(rel.params['from'], 'foo')
+        self.assertEqual(rel.params['where'], [{'id': 1}])
+        self.assertEqual(options, {'from': 'foo'})
+
 ##
 # All method
 #

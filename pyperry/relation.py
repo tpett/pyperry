@@ -168,23 +168,23 @@ class Relation(object):
         return len(self.fetch_records())
 
 
-    def first(self, options={}):
+    def first(self, options={}, **kwargs):
         """Apply a limit scope of 1 and return the resulting singular value"""
         options.update({ 'limit': 1 })
-        records = self.all(options)
+        records = self.all(options, **kwargs)
         if len(records) < 1:
             raise RecordNotFound('could not find a record for %s' %
                     self.klass.__name__)
         return records[0]
 
-    def all(self, options={}):
+    def all(self, options={}, **kwargs):
         """
         Apply any finder options passed and execute the query returning the
         list of records
         """
-        return self.apply_finder_options(options).fetch_records()
+        return self.apply_finder_options(options, **kwargs).fetch_records()
 
-    def find(self, pks_or_mode, options={}):
+    def find(self, pks_or_mode, options={}, **kwargs):
         """
         Returns a record or list of records matching the primary key or array
         of primary keys given as its first argument. If the first argument is
@@ -193,9 +193,9 @@ class Relation(object):
         argument.
         """
         if pks_or_mode == 'all':
-            return self.all(options)
+            return self.all(options, **kwargs)
         elif pks_or_mode == 'first':
-            return self.first(options)
+            return self.first(options, **kwargs)
         elif isinstance(pks_or_mode, list):
             result = self.where({self.klass.primary_key(): pks_or_mode})
             if len(result) < len(pks_or_mode):
@@ -214,9 +214,11 @@ class Relation(object):
         m = len(results)
         return err % (self.klass.__name__, str(pk_array), n, m)
 
-    def apply_finder_options(self, options):
+    def apply_finder_options(self, options={}, **kwargs):
         """Apply given dictionary as finder options returning a new relation"""
         self = self.clone()
+        options = copy(options)
+        options.update(kwargs)
 
         valid_methods = (
                 self.singular_query_methods +
