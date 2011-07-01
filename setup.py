@@ -17,7 +17,7 @@ setup(
     install_requires=[
         'erlastic==1.0.0',
         'bert>=1.0.0,<=1.1.0',
-        'bertrpc>=0.1.1,<0.2.0',
+        'insight-bertrpc>=0.1.2,<0.2.0',
         'simplejson>=2.1.0,<2.2'
     ],
     classifiers = [
