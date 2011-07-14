@@ -189,7 +189,7 @@ class FindMethodTestCase(BaseRelationTestCase):
         should raise Perry::RecordNotFound when id passed and record could not
         be found
         """
-        TestAdapter.data = []
+        TestAdapter.count = 0
         self.assertRaises(errors.RecordNotFound, self.relation.find, 1)
 
     def test_record_not_found_when_array(self):
@@ -622,6 +622,13 @@ class RelationFirstMethodTestCase(BaseRelationTestCase):
         assert isinstance(result, self.relation.klass)
         self.assertEqual(TestAdapter.calls[-1]['limit'], 1)
 
+    def test_returns_none(self):
+        """should return None if there are no results"""
+        TestAdapter.count = 0
+        result = self.relation.first()
+
+        self.assertEqual(result, None)
+
 ##
 # Find method
 #
@@ -672,5 +679,11 @@ class RelationActsLikeListTestCase(BaseRelationTestCase):
     def test_len(self):
         """len should return record count"""
         self.assertEqual(len(self.relation), 3)
+
+    def test_add(self):
+        """should allow addition as adding lists"""
+        a = self.relation.clone()
+        b = self.relation.clone()
+        self.assertEqual(a + b, list(a) + list(b))
 
 

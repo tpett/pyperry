@@ -167,15 +167,19 @@ class Relation(object):
     def __len__(self):
         return len(self.fetch_records())
 
+    # Allow appending two relation's results into a single list
+    def __add__(self, b):
+        return list(self) + list(b)
+
 
     def first(self, options={}, **kwargs):
         """Apply a limit scope of 1 and return the resulting singular value"""
         options.update({ 'limit': 1 })
         records = self.all(options, **kwargs)
-        if len(records) < 1:
-            raise RecordNotFound('could not find a record for %s' %
-                    self.klass.__name__)
-        return records[0]
+        if len(records) > 0:
+            return records[0]
+        else:
+            return None
 
     def all(self, options={}, **kwargs):
         """
@@ -203,7 +207,11 @@ class Relation(object):
                         self._record_not_found_message(pks_or_mode, result))
             return result
         elif isinstance(pks_or_mode, str) or isinstance(pks_or_mode, int):
-            return self.where({self.klass.primary_key(): pks_or_mode}).first()
+            result = self.where({self.klass.primary_key(): pks_or_mode}).first()
+            if not result:
+                raise RecordNotFound('could not find a record for %s with'
+                        'primary key %s' % (self.klass.__name__, pks_or_mode) )
+            return result
         else:
             raise ArgumentError('unkown arguments for find method')
 
@@ -431,9 +439,9 @@ class Relation(object):
         self._query = None
 
     def __repr__(self):
-        # return repr(self.fetch_records())
-        return("<Relation for %s Query: %s>" %
-                (self.klass.__name__, str(self.params)) )
+        return repr(self.fetch_records())
+        # return("<Relation for %s Query: %s>" %
+        #         (self.klass.__name__, str(self.params)) )
 
     def _eval_lambdas(self, value):
         if type(value).__name__ == 'list':
