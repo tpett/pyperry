@@ -17,7 +17,7 @@ class BERTRPC(AbstractAdapter):
     def read(self, **kwargs):
         options = kwargs['relation'].query()
         options.update(self.config.base_options)
-        pyperry.logger.info('RPC: %s' % options)
+        pyperry.logger.info('RPC.%s: %s' % (self.config.procedure, options))
         request = self.service.request('call')
         module = request.__getattr__(self.config.namespace)
         procedure = module.__getattr__(self.config.procedure)
