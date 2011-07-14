@@ -128,7 +128,7 @@ class AbstractAdapter(object):
 
     def __call__(self, **kwargs):
         """Makes a request to the stack"""
-        pyperry.logger.info('%s: %s' % (self.mode, kwargs.keys()))
+        pyperry.logger.debug('%s: %s' % (self.mode, kwargs.keys()))
         if 'mode' not in kwargs:
             kwargs.update(mode=self.mode)
         result = self.stack(**kwargs)

@@ -1,3 +1,4 @@
+import pyperry
 from datetime import datetime, timedelta
 import hashlib
 
@@ -74,6 +75,9 @@ class LocalCache(object):
         if not result or rel.params['fresh']:
             # Call the next item in the stack to get a fresh result
             result = self.next(**kwargs)
+        else:
+            pyperry.logger.info('CACHE: %s' % kwargs['relation'].query())
+
 
         # Use configured cache expiry interval if set
         expires_at = None

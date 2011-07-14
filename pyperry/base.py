@@ -824,15 +824,15 @@ class Base(object):
         """
         if not hasattr(cls, 'scopes'): cls.scopes = {}
 
-        if type(name_or_func).__name__ == 'function':
+        if callable(name_or_func):
             name = name_or_func.__name__
         elif isinstance(name_or_func, str):
             name = name_or_func
 
         def scope(cls, *inargs, **inkwargs):
-            if type(name_or_func).__name__ == 'function':
+            if callable(name_or_func):
                 delayed = name_or_func
-            elif len(args) > 0 and type(args[0]).__name__ == 'function':
+            elif len(args) > 0 and callable(args[0]):
                 delayed = args[0]
             else:
                 delayed = None
@@ -994,7 +994,7 @@ class Base(object):
         else:
             options = None
 
-        if not options:
+        if options is None:
             raise errors.ArgumentError("Invalid scoping arguments (%s, %s)"
                     % (args, kwargs))
 
