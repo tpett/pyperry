@@ -96,6 +96,35 @@ class UrlForMethodTestCase(HttpAdapterTestCase):
         self.assertEqual(url, '/widgets.xml')
 
 
+class ParamsValueTestCase(HttpAdapterTestCase):
+
+    def test_None_values(self):
+        value = self.adapter.params_value(None)
+        self.assertEqual(value, '')
+
+    def test_bool_values(self):
+        value = self.adapter.params_value(True)
+        self.assertEqual(value, "true")
+        value = self.adapter.params_value(False)
+        self.assertEqual(value, "false")
+
+    def test_other_values(self):
+        value = self.adapter.params_value(37)
+        self.assertEqual(value, 37)
+        value = self.adapter.params_value('37')
+        self.assertEqual(value, '37')
+
+    def test_custom_serializer(self):
+        custom_serializer = lambda value: 'foo' if value == 3 else 'bar'
+        self.config['serializer'] = custom_serializer
+        adapter = RestfulHttpAdapter(self.config, mode='read')
+
+        value = adapter.params_value('fudge')
+        self.assertEqual(value, 'bar')
+        value = adapter.params_value(3)
+        self.assertEqual(value, 'foo')
+
+
 class ParamsForMethodTestCase(HttpAdapterTestCase):
 
     def test_model_attributes(self):

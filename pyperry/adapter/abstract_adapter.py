@@ -47,8 +47,9 @@ from pyperry.middlewares.model_bridge import ModelBridge
 class DelayedConfig(object):
     """
     Simple class that takes kwargs or a dictionary in initializer and sets
-    values to the class dictionary.  Any values set as lambdas will be
-    evaluated when they are accessed.
+    values to the class dictionary.  Any values set as callables with an
+    arity of 0 will be evaluated when they are accessed. If the callables arity
+    is greater than 0, it will not be called automatically.
     """
 
     def __init__(self, *args, **kwargs):
@@ -61,7 +62,7 @@ class DelayedConfig(object):
 
     def __getattribute__(self, key):
         attr = object.__getattribute__(self, key)
-        if type(attr).__name__ == 'function':
+        if callable(attr) and attr.func_code.co_argcount == 0:
             attr = attr()
         return attr
 
