@@ -63,11 +63,28 @@ class InitTestCase(AdapterBaseTestCase):
                 AbstractAdapter, {}, mode='poop')
 
     def test_delayed_exec(self):
-        """should delay execution of lambdas"""
+        """should delay execution of callables"""
         foo_val = 'BAD'
         adapter = AbstractAdapter({'foo': lambda: foo_val }, mode='read')
         foo_val = 'GOOD'
         self.assertEqual(adapter.config.foo, 'GOOD')
+
+        foo_val = 'BAD'
+        def foo():
+            return foo_val
+        adapter = AbstractAdapter({'foo': foo }, mode='read')
+        foo_val = 'GOOD'
+        self.assertEqual(adapter.config.foo, 'GOOD')
+
+    def test_delayed_exec_arity(self):
+        """should not execute callables if ther arity is greater than 1"""
+        adapter = AbstractAdapter({'foo': lambda x: 'bar' * x}, mode='read')
+        self.assertEqual(adapter.config.foo(3), 'barbarbar')
+
+        def foo(x):
+            return 'bar' * x
+        adapter = AbstractAdapter({'foo': foo}, mode='read')
+        self.assertEqual(adapter.config.foo(3), 'barbarbar')
 
     def test_init_middleware(self):
         """middlewares should include ModelBridge by default"""

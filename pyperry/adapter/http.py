@@ -49,6 +49,11 @@ class RestfulHttpAdapter(AbstractAdapter):
           option is also present. One thing C{default_params} are useful for
           is including an api key with every request.
 
+        - B{serializer}: a callable that takes an attribute value as its only
+          argument and returns a serialized version of that value suitable for
+          sending over HTTP. The default serializer serializes C{None} as
+          C{''}, C{True} as C{'true'} and C{False} as C{'false'}.
+
     """
 
     def read(self, **kwargs):
@@ -269,6 +274,14 @@ class RestfulHttpAdapter(AbstractAdapter):
         return new_key_prefix
 
     def params_value(self, value):
+        serializer = self.config_value('serializer', self._default_serializer)
+        return serializer(value)
+
+    def _default_serializer(self, value):
         if value is None:
             value = ''
+        elif value is True:
+            value = 'true'
+        elif value is False:
+            value = 'false'
         return value
