@@ -78,17 +78,24 @@ class BaseMeta(type):
 
         return new
 
+    _relation_delegates = (Relation.singular_query_methods +
+                Relation.plural_query_methods +
+                ['modifiers', 'all', 'first', 'find'])
+
     def __getattr__(cls, key):
         """Allow delegation to Relation or raise AttributeError"""
-        relation_delegation = (
-                Relation.singular_query_methods +
-                Relation.plural_query_methods +
-                ['modifiers', 'all', 'first', 'find'] )
-
-        if key in relation_delegation:
+        if key in cls._relation_delegates:
             return getattr(cls.scoped(), key)
         else:
             raise AttributeError("Undefined attribute '%s'" % key)
+
+    def __dir__(cls):
+        """add the methods delegated to relation to dir() results"""
+        attrs = cls.__dict__.keys()
+        for b in cls.__bases__:
+            attrs += dir(b)
+        attrs += cls._relation_delegates
+        return list(set(attrs)) # remove duplicates from list
 
     def resolve_name(cls, name):
         """
@@ -400,6 +407,19 @@ class Base(object):
             setattr(self, '_' + key, value)
         else:
             object.__setattr__(self, key, value)
+
+    def __dir__(self):
+        """
+        Adds dynamically defined attributes and scopes to the results for dir()
+
+        """
+        excluded_attrs = self.__class__._relation_delegates
+        return list(set( # removes duplicate entries
+            [x for x in dir(self.__class__) if x not in excluded_attrs] +
+            self.__dict__.keys() +
+            list(self.defined_attributes) +
+            self.defined_associations.keys()
+        ))
 
     def pk_attr(self):
         """
