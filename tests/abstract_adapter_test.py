@@ -279,7 +279,7 @@ class SocketTimeoutTestCase(AdapterBaseTestCase):
         """default timeout should be 10 seconds"""
         socket.setdefaulttimeout(None)
         adapter = AbstractAdapter({}, mode='read')
-        self.assertEqual(socket.getdefaulttimeout(), 10)
+        self.assertEqual(socket.getdefaulttimeout(), None)
 
     def test_global_default(self):
         """
