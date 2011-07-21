@@ -1,5 +1,6 @@
 import tests
 import unittest
+from nose.plugins.skip import SkipTest
 
 import pyperry
 from pyperry.relation import Relation
@@ -87,3 +88,93 @@ class DirMethodTestCase(unittest.TestCase):
         for x in self.TestModel._relation_delegates:
             self.assertTrue(x not in attrs,
                     "expected '%s' NOT to be in '%s'" % (x, attrs))
+
+
+class HelpMethodTestCase(unittest.TestCase):
+    """
+    We need to include additional information about attributes and associations
+    for subclasses of pyperry.Base so python's built-in help() method is
+    useful. To accomplish this, we are setting __doc__ in BaseMeta.__new__, so
+    that is what we are testing here.
+
+    """
+
+    def assertContains(self, subject, search_string):
+        """assert that the search_string is a substring of the subject"""
+        subject = str(subject)
+        self.assertTrue(subject.find(search_string) >= 0,
+                "expected to find '%s' in '%s'" % (search_string, subject))
+
+    def test_docstring_included(self):
+        """should include the model's docstring in __doc__"""
+        class Model(pyperry.Base):
+            """a model with a docstring"""
+            pass
+        self.assertContains(Model.__doc__, 'a model with a docstring')
+
+    def test_attributes_included(self):
+        """should include a model's attributes in __doc__"""
+        class Model(pyperry.Base):
+            def _config(cls):
+                cls.attributes('attr1', 'attr2')
+        self.assertContains(Model.__doc__, '\nData attributes:')
+        for attr in Model.defined_attributes:
+            self.assertContains(Model.__doc__, '\t' + attr)
+
+    def test_associations_included(self):
+        """should include a model's associations in __doc__"""
+        class Model(pyperry.Base):
+            def _config(cls):
+                cls.belongs_to('foo')
+                cls.has_many('bars')
+        self.assertContains(Model.__doc__, '\nAssociations:')
+        self.assertContains(Model.__doc__, '\tbelongs_to foo')
+        self.assertContains(Model.__doc__, '\thas_many bars')
+
+    def test_everything(self):
+        """
+        should included everything specified in __doc__ with proper formatting
+        and sorted in correct order
+
+        """
+        class Model(pyperry.Base):
+            """a model with a docstring"""
+            def _config(cls):
+                cls.attributes('attr1', 'attr2')
+                cls.belongs_to('foo')
+                cls.belongs_to('ape')
+                cls.has_many('bars')
+                cls.has_many('bananas')
+        self.assertEqual(Model.__doc__,
+"""a model with a docstring
+
+Data attributes:
+\tattr1
+\tattr2
+
+Associations:
+\tbelongs_to ape
+\tbelongs_to foo
+\thas_many bananas
+\thas_many bars"""
+        )
+
+    def test_afterthoughts(self):
+        """
+        should included attributes and associations defined after the class
+        definition is closed
+
+        """
+        raise SkipTest # As far as I can tell, this is not possible to do
+        # without updating __doc__ every time a new attribute or assocation is
+        # defined on the model.
+        class Model(pyperry.Base):
+            pass
+        Model.attributes('foo')
+        Model.has_many('bars')
+        self.assertContains(Model.__doc__, 'foo')
+        self.assertContains(Model.__doc__, 'has_many bars')
+
+
+class DescribeAssociationTestCase(unittest.TestCase):
+    pass

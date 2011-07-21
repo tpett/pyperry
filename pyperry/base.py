@@ -1,6 +1,7 @@
 import datetime
 import types
 from copy import deepcopy, copy
+import traceback
 
 from pyperry import errors
 from pyperry.relation import Relation
@@ -76,6 +77,9 @@ class BaseMeta(type):
             mcs.defined_models[name] = []
         mcs.defined_models[name].append(new)
 
+        new._docstring = new.__doc__
+        new.__doc__ = new.get_docstring()
+
         return new
 
     _relation_delegates = (Relation.singular_query_methods +
@@ -136,6 +140,22 @@ class BaseMeta(type):
             return classes
         else:
             return []
+
+    def get_docstring(cls):
+        doc_parts = []
+        if cls._docstring:
+            doc_parts.append(cls._docstring)
+        doc_parts.append('\nData attributes:')
+        doc_parts += ['\t%s' % attr for attr in sorted(cls.defined_attributes)]
+        doc_parts.append('\nAssociations:')
+        doc_parts += sorted([cls.describe_association(assoc_name)
+                             for assoc_name in cls.defined_associations])
+        return '\n'.join(doc_parts)
+
+    def describe_association(cls, name):
+        assoc = cls.defined_associations[name]
+        return '\t%s %s' % (assoc.type(), name)
+
 
 class Base(object):
     """
