@@ -1,5 +1,6 @@
 import tests
 import unittest
+import pydoc
 from nose.plugins.skip import SkipTest
 
 import pyperry
@@ -88,6 +89,22 @@ class DirMethodTestCase(unittest.TestCase):
         for x in self.TestModel._relation_delegates:
             self.assertTrue(x not in attrs,
                     "expected '%s' NOT to be in '%s'" % (x, attrs))
+
+    def test_class_dir_for_help(self):
+        """
+        should not cause pydoc.TextDoc().docclass() to raise AttributeError.
+        This method is used internally by the help() function, and if it cannot
+        resolve the class of even one attribute (as in the case of the
+        attributes delegated to the Relation class), the help text will be
+        blank. I know this is a huge hack, so if you can think of a better way
+        to do it, please do so!
+
+        """
+        try:
+            pydoc.TextDoc().docclass(self.TestModel)
+        except AttributeError as ex:
+            self.fail('expected call not to raise an exception.\n' +
+                      'Exception was: %s' % repr(ex))
 
 
 class HelpMethodTestCase(unittest.TestCase):

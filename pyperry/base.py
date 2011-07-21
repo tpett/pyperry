@@ -99,7 +99,16 @@ class BaseMeta(type):
         for b in cls.__bases__:
             attrs += dir(b)
         attrs += cls._relation_delegates
-        return list(set(attrs)) # remove duplicates from list
+        all_attrs = list(set(attrs)) # remove duplicates from list
+
+        # If the call to __dir__ is triggered by a call to help(), we need to
+        # remove the attributes delegated to relation from the list we return
+        # or the help page will be blank.
+        frame = traceback.extract_stack(None, 2)[0]
+        if 'inspect.py' in frame[0] and 'classify_class_attrs' in frame[2]:
+            all_attrs = [x for x in all_attrs
+                         if not x in cls._relation_delegates]
+        return all_attrs
 
     def resolve_name(cls, name):
         """
