@@ -155,7 +155,8 @@ class BaseMeta(type):
         if cls._docstring:
             doc_parts.append(cls._docstring)
         doc_parts.append('\nData attributes:')
-        doc_parts += ['\t%s' % attr for attr in sorted(cls.defined_attributes)]
+        doc_parts += ['    %s' % attr
+                      for attr in sorted(cls.defined_attributes)]
         doc_parts.append('\nAssociations:')
         doc_parts += sorted([cls.describe_association(assoc_name)
                              for assoc_name in cls.defined_associations])
@@ -176,7 +177,7 @@ class BaseMeta(type):
             type_ = 'has_many'
             extra = 'through ' + assoc.options['through']
 
-        description = ('\t%-' + type_width + 's %s') % (type_, name)
+        description = ('    %-' + type_width + 's %s') % (type_, name)
         if extra:
             description += ' (%s)' % extra
         return description

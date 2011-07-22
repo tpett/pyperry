@@ -123,15 +123,15 @@ class HelpMethodTestCase(unittest.TestCase):
         """should include a model's attributes in __doc__"""
         self.assertContains(HelpModel.__doc__, '\nData attributes:')
         for attr in HelpModel.defined_attributes:
-            self.assertContains(HelpModel.__doc__, '\t' + attr)
+            self.assertContains(HelpModel.__doc__, '    ' + attr)
 
     def test_associations_included(self):
         """should include a model's associations in __doc__"""
         self.assertContains(HelpModel.__doc__, '\nAssociations:')
-        self.assertContains(HelpModel.__doc__, '\tbelongs_to    ape')
-        self.assertContains(HelpModel.__doc__, '\tbelongs_to    foo')
-        self.assertContains(HelpModel.__doc__, '\thas_many      bars')
-        self.assertContains(HelpModel.__doc__, '\thas_many      bananas')
+        self.assertContains(HelpModel.__doc__, '    belongs_to    ape')
+        self.assertContains(HelpModel.__doc__, '    belongs_to    foo')
+        self.assertContains(HelpModel.__doc__, '    has_many      bars')
+        self.assertContains(HelpModel.__doc__, '    has_many      bananas')
 
     def test_link_to_docs(self):
         """should include a link to the full documentation"""
@@ -148,14 +148,14 @@ class HelpMethodTestCase(unittest.TestCase):
 """a model with a docstring
 
 Data attributes:
-\tattr1
-\tattr2
+    attr1
+    attr2
 
 Associations:
-\tbelongs_to    ape
-\tbelongs_to    foo (polymorphic)
-\thas_many      bananas
-\thas_many      bars (through bananas)
+    belongs_to    ape
+    belongs_to    foo (polymorphic)
+    has_many      bananas
+    has_many      bars (through bananas)
 
 Full documentation available at http://packages.python.org/pyperry/"""
         )
@@ -165,20 +165,20 @@ class DescribeAssociationTestCase(unittest.TestCase):
 
     def test_belongs_to(self):
         self.assertEqual(AssociationModel.describe_association('you'),
-            "\tbelongs_to    you")
+            "    belongs_to    you")
 
     def test_belongs_to_polymorphic(self):
         self.assertEqual(AssociationModel.describe_association('foo'),
-            "\tbelongs_to    foo (polymorphic)")
+            "    belongs_to    foo (polymorphic)")
 
     def test_has_one(self):
         self.assertEqual(AssociationModel.describe_association('bar'),
-            "\thas_one       bar")
+            "    has_one       bar")
 
     def test_has_many(self):
         self.assertEqual(AssociationModel.describe_association('bizs'),
-            "\thas_many      bizs")
+            "    has_many      bizs")
 
     def test_has_many_through(self):
         self.assertEqual(AssociationModel.describe_association('bazs'),
-            "\thas_many      bazs (through bizs)")
+            "    has_many      bazs (through bizs)")
