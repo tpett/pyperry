@@ -131,6 +131,11 @@ class HelpMethodTestCase(unittest.TestCase):
         self.assertContains(HelpModel.__doc__, '\tbelongs_to foo')
         self.assertContains(HelpModel.__doc__, '\thas_many bars')
 
+    def test_link_to_docs(self):
+        """should include a link to the full documentation"""
+        self.assertContains(HelpModel.__doc__,
+                'http://packages.python.org/pyperry/')
+
     def test_everything(self):
         """
         should included everything specified in __doc__ with proper formatting
@@ -148,7 +153,9 @@ Associations:
 \tbelongs_to ape
 \tbelongs_to foo
 \thas_many bananas
-\thas_many bars"""
+\thas_many bars
+
+Full documentation available at http://packages.python.org/pyperry/"""
         )
 
 

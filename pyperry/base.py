@@ -159,6 +159,8 @@ class BaseMeta(type):
         doc_parts.append('\nAssociations:')
         doc_parts += sorted([cls.describe_association(assoc_name)
                              for assoc_name in cls.defined_associations])
+        doc_parts.append('\nFull documentation available at ' +
+                'http://packages.python.org/pyperry/')
         return '\n'.join(doc_parts)
 
     def describe_association(cls, name):
