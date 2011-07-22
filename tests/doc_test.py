@@ -1,5 +1,6 @@
 import tests
 import unittest
+import sys
 import pydoc
 from nose.plugins.skip import SkipTest
 
@@ -36,6 +37,9 @@ class DirMethodTestCase(unittest.TestCase):
         the Relation class
 
         """
+        if sys.hexversion < 0x02060000:
+            raise SkipTest # __dir__ is ignored in python < 2.6
+
         attrs = dir(DirModel)
 
         for x in DirModel.__dict__.keys():
@@ -58,6 +62,9 @@ class DirMethodTestCase(unittest.TestCase):
         defined_associations for the pyperry model.
 
         """
+        if sys.hexversion < 0x02060000:
+            raise SkipTest # __dir__ is ignored in python < 2.6
+
         model = DirModel()
         attrs = dir(model)
 
@@ -95,7 +102,7 @@ class DirMethodTestCase(unittest.TestCase):
         """
         try:
             pydoc.TextDoc().docclass(DirModel)
-        except AttributeError as ex:
+        except AttributeError, ex:
             self.fail('expected call not to raise an exception.\n' +
                       'Exception was: %s' % repr(ex))
 

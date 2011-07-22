@@ -1,6 +1,9 @@
 import tests
 import unittest
-import json
+try:
+    import json
+except:
+    import simplejson as json
 
 from pyperry.response import Response
 
