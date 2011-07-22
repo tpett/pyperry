@@ -164,8 +164,22 @@ class BaseMeta(type):
         return '\n'.join(doc_parts)
 
     def describe_association(cls, name):
+        extra = None
         assoc = cls.defined_associations[name]
-        return '\t%s %s' % (assoc.type(), name)
+        type_ = assoc.type()
+        type_width = str(len('belongs_to') + 3)
+
+        if type_ == 'belongs_to' and assoc.polymorphic():
+            extra = 'polymorphic'
+
+        if type_ == 'has_many_through':
+            type_ = 'has_many'
+            extra = 'through ' + assoc.options['through']
+
+        description = ('\t%-' + type_width + 's %s') % (type_, name)
+        if extra:
+            description += ' (%s)' % extra
+        return description
 
 
 class Base(object):
