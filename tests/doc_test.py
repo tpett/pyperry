@@ -6,6 +6,8 @@ from nose.plugins.skip import SkipTest
 import pyperry
 from pyperry.relation import Relation
 
+from tests.fixtures.doc_models import *
+
 class DirMethodTestCase(unittest.TestCase):
     """
     I'm trying to add to the list of attributes returned by calling dir() by
@@ -27,15 +29,6 @@ class DirMethodTestCase(unittest.TestCase):
 
     """
 
-    def setUp(self):
-        class TestModel(pyperry.Base):
-            def _config(cls):
-                cls.attributes('id', 'foo', 'bar')
-                cls.belongs_to('owner')
-                cls.has_many('children')
-
-        self.TestModel = TestModel
-
     def test_class_dir(self):
         """
         should include the attributes included by default when calling dir() on
@@ -43,13 +36,13 @@ class DirMethodTestCase(unittest.TestCase):
         the Relation class
 
         """
-        attrs = dir(self.TestModel)
+        attrs = dir(DirModel)
 
-        for x in self.TestModel.__dict__.keys():
+        for x in DirModel.__dict__.keys():
             self.assertTrue(x in attrs,
                     "expected '%s' to be in '%s'" % (x, attrs))
 
-        for x in dir(self.TestModel.__bases__[0]):
+        for x in dir(DirModel.__bases__[0]):
             self.assertTrue(x in attrs,
                     "expected '%s' to be in '%s'" % (x, attrs))
 
@@ -65,7 +58,7 @@ class DirMethodTestCase(unittest.TestCase):
         defined_associations for the pyperry model.
 
         """
-        model = self.TestModel()
+        model = DirModel()
         attrs = dir(model)
 
         for x in model.__dict__.keys():
@@ -73,7 +66,7 @@ class DirMethodTestCase(unittest.TestCase):
                     "expected '%s' to be in '%s'" % (x, attrs))
 
         class_attrs = [x for x in dir(model.__class__)
-                if not x in self.TestModel._relation_delegates]
+                if not x in DirModel._relation_delegates]
         for x in class_attrs:
             self.assertTrue(x in attrs,
                     "expected '%s' to be in '%s'" % (x, attrs))
@@ -86,7 +79,7 @@ class DirMethodTestCase(unittest.TestCase):
             self.assertTrue(x in attrs,
                     "expected '%s' to be in '%s'" % (x, attrs))
 
-        for x in self.TestModel._relation_delegates:
+        for x in DirModel._relation_delegates:
             self.assertTrue(x not in attrs,
                     "expected '%s' NOT to be in '%s'" % (x, attrs))
 
@@ -101,7 +94,7 @@ class DirMethodTestCase(unittest.TestCase):
 
         """
         try:
-            pydoc.TextDoc().docclass(self.TestModel)
+            pydoc.TextDoc().docclass(DirModel)
         except AttributeError as ex:
             self.fail('expected call not to raise an exception.\n' +
                       'Exception was: %s' % repr(ex))
@@ -124,29 +117,19 @@ class HelpMethodTestCase(unittest.TestCase):
 
     def test_docstring_included(self):
         """should include the model's docstring in __doc__"""
-        class Model(pyperry.Base):
-            """a model with a docstring"""
-            pass
-        self.assertContains(Model.__doc__, 'a model with a docstring')
+        self.assertContains(HelpModel.__doc__, 'a model with a docstring')
 
     def test_attributes_included(self):
         """should include a model's attributes in __doc__"""
-        class Model(pyperry.Base):
-            def _config(cls):
-                cls.attributes('attr1', 'attr2')
-        self.assertContains(Model.__doc__, '\nData attributes:')
-        for attr in Model.defined_attributes:
-            self.assertContains(Model.__doc__, '\t' + attr)
+        self.assertContains(HelpModel.__doc__, '\nData attributes:')
+        for attr in HelpModel.defined_attributes:
+            self.assertContains(HelpModel.__doc__, '\t' + attr)
 
     def test_associations_included(self):
         """should include a model's associations in __doc__"""
-        class Model(pyperry.Base):
-            def _config(cls):
-                cls.belongs_to('foo')
-                cls.has_many('bars')
-        self.assertContains(Model.__doc__, '\nAssociations:')
-        self.assertContains(Model.__doc__, '\tbelongs_to foo')
-        self.assertContains(Model.__doc__, '\thas_many bars')
+        self.assertContains(HelpModel.__doc__, '\nAssociations:')
+        self.assertContains(HelpModel.__doc__, '\tbelongs_to foo')
+        self.assertContains(HelpModel.__doc__, '\thas_many bars')
 
     def test_everything(self):
         """
@@ -154,15 +137,7 @@ class HelpMethodTestCase(unittest.TestCase):
         and sorted in correct order
 
         """
-        class Model(pyperry.Base):
-            """a model with a docstring"""
-            def _config(cls):
-                cls.attributes('attr1', 'attr2')
-                cls.belongs_to('foo')
-                cls.belongs_to('ape')
-                cls.has_many('bars')
-                cls.has_many('bananas')
-        self.assertEqual(Model.__doc__,
+        self.assertEqual(HelpModel.__doc__,
 """a model with a docstring
 
 Data attributes:
@@ -175,22 +150,6 @@ Associations:
 \thas_many bananas
 \thas_many bars"""
         )
-
-    def test_afterthoughts(self):
-        """
-        should included attributes and associations defined after the class
-        definition is closed
-
-        """
-        raise SkipTest # As far as I can tell, this is not possible to do
-        # without updating __doc__ every time a new attribute or assocation is
-        # defined on the model.
-        class Model(pyperry.Base):
-            pass
-        Model.attributes('foo')
-        Model.has_many('bars')
-        self.assertContains(Model.__doc__, 'foo')
-        self.assertContains(Model.__doc__, 'has_many bars')
 
 
 class DescribeAssociationTestCase(unittest.TestCase):
