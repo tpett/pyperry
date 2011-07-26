@@ -1,7 +1,10 @@
 import tests
 import unittest
 from copy import copy
-import json
+try:
+    import json
+except:
+    import simplejson as json
 
 import pyperry
 from pyperry.adapter.http import RestfulHttpAdapter

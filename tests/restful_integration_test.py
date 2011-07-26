@@ -1,6 +1,9 @@
 import tests
 import unittest
-import json
+try:
+    import json
+except:
+    import simplejson as json
 import pyperry
 import tests.helpers.http_test_server as http_server
 from pyperry.adapter.http import RestfulHttpAdapter

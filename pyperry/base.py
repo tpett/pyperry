@@ -1,6 +1,7 @@
 import datetime
 import types
 from copy import deepcopy, copy
+import traceback
 
 from pyperry import errors
 from pyperry.relation import Relation
@@ -76,19 +77,38 @@ class BaseMeta(type):
             mcs.defined_models[name] = []
         mcs.defined_models[name].append(new)
 
+        new._docstring = new.__doc__
+        new.__doc__ = new.get_docstring()
+
         return new
+
+    _relation_delegates = (Relation.singular_query_methods +
+                Relation.plural_query_methods +
+                ['modifiers', 'all', 'first', 'find'])
 
     def __getattr__(cls, key):
         """Allow delegation to Relation or raise AttributeError"""
-        relation_delegation = (
-                Relation.singular_query_methods +
-                Relation.plural_query_methods +
-                ['modifiers', 'all', 'first', 'find'] )
-
-        if key in relation_delegation:
+        if key in cls._relation_delegates:
             return getattr(cls.scoped(), key)
         else:
             raise AttributeError("Undefined attribute '%s'" % key)
+
+    def __dir__(cls):
+        """add the methods delegated to relation to dir() results"""
+        attrs = cls.__dict__.keys()
+        for b in cls.__bases__:
+            attrs += dir(b)
+        attrs += cls._relation_delegates
+        all_attrs = list(set(attrs)) # remove duplicates from list
+
+        # If the call to __dir__ is triggered by a call to help(), we need to
+        # remove the attributes delegated to relation from the list we return
+        # or the help page will be blank.
+        frame = traceback.extract_stack(None, 2)[0]
+        if 'inspect.py' in frame[0] and 'classify_class_attrs' in frame[2]:
+            all_attrs = [x for x in all_attrs
+                         if not x in cls._relation_delegates]
+        return all_attrs
 
     def resolve_name(cls, name):
         """
@@ -129,6 +149,39 @@ class BaseMeta(type):
             return classes
         else:
             return []
+
+    def get_docstring(cls):
+        doc_parts = []
+        if cls._docstring:
+            doc_parts.append(cls._docstring)
+        doc_parts.append('\nData attributes:')
+        doc_parts += ['    %s' % attr
+                      for attr in sorted(cls.defined_attributes)]
+        doc_parts.append('\nAssociations:')
+        doc_parts += sorted([cls.describe_association(assoc_name)
+                             for assoc_name in cls.defined_associations])
+        doc_parts.append('\nFull documentation available at ' +
+                'http://packages.python.org/pyperry/')
+        return '\n'.join(doc_parts)
+
+    def describe_association(cls, name):
+        extra = None
+        assoc = cls.defined_associations[name]
+        type_ = assoc.type()
+        type_width = str(len('belongs_to') + 3)
+
+        if type_ == 'belongs_to' and assoc.polymorphic():
+            extra = 'polymorphic'
+
+        if type_ == 'has_many_through':
+            type_ = 'has_many'
+            extra = 'through ' + assoc.options['through']
+
+        description = ('    %-' + type_width + 's %s') % (type_, name)
+        if extra:
+            description += ' (%s)' % extra
+        return description
+
 
 class Base(object):
     """
@@ -400,6 +453,19 @@ class Base(object):
             setattr(self, '_' + key, value)
         else:
             object.__setattr__(self, key, value)
+
+    def __dir__(self):
+        """
+        Adds dynamically defined attributes and scopes to the results for dir()
+
+        """
+        excluded_attrs = self.__class__._relation_delegates
+        return list(set( # removes duplicate entries
+            [x for x in dir(self.__class__) if x not in excluded_attrs] +
+            self.__dict__.keys() +
+            list(self.defined_attributes) +
+            self.defined_associations.keys()
+        ))
 
     def pk_attr(self):
         """

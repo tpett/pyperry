@@ -100,7 +100,6 @@ class InitializeTestCase(BaseTestCase):
         self.assertEqual(t.name, 'test')
 
 
-
 ##
 # Configurable primary keys
 #
