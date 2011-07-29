@@ -245,6 +245,9 @@ class QueryMethodsTestCase(BaseRelationTestCase):
             self.assertEqual(relation.params[method_name], ['foo', 'baz'])
             self.assertEqual(self.relation.params[method_name], [])
 
+            relation = method(['poo', 'juice'])
+            self.assertEqual(relation.params[method_name], [['poo', 'juice']])
+
     def test_plural_query_methods_accept_kwargs(self):
         """plural query methods should accept kwargs one of their values"""
         for method_name in plural_query_methods:
@@ -258,7 +261,6 @@ class QueryMethodsTestCase(BaseRelationTestCase):
             self.assertEqual(relation.params[method_name],
                     ['foo', 'bar', {'foo': 'bar'}])
             self.assertEqual(self.relation.params[method_name], [])
-
 
 
 class IncludesTestCase(BaseRelationTestCase):
@@ -541,10 +543,10 @@ class ApplyFinderOptionsTestCase(BaseRelationTestCase):
     def test_plural_query_methods(self):
         """Should take any plural query methods as options"""
         rel = self.relation.apply_finder_options({
-            'where': { 'id': 1 }, 'group': ['bar', 'baz'] })
+            'where': { 'id': 1 }, 'group': 'bar' })
 
         self.assertEqual(rel.params['where'], [{ 'id': 1 }])
-        self.assertEqual(rel.params['group'], ['bar', 'baz'])
+        self.assertEqual(rel.params['group'], ['bar'])
 
     def test_conditions_key(self):
         """Should allow conditions key as alias for where"""

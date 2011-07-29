@@ -418,9 +418,6 @@ class Relation(object):
         """
         def method(self, *value, **kwargs):
             self = self.clone()
-            # If they are passing in a list rather than a tuple
-            if len(value) == 1 and isinstance(value[0], list):
-                value = value[0]
             self.params[key] += list(value)
             if len(kwargs) > 0:
                 self.params[key].append(kwargs)
