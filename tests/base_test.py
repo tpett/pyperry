@@ -665,6 +665,11 @@ class BaseDefaultScopeMethodTestCase(BaseScopingTestCase):
         rel = self.Test.where('bar')
         self.assertEqual(rel.params['where'], ['foo', 'bar'])
 
+    def test_no_query_run(self):
+        """should not execute a query when calling default_scope"""
+        self.Test.default_scope(where='foo')
+        self.assertEqual(len(TestAdapter.calls), 0)
+
     # IDEA: """should accept a lambda returning a dict or Relation"""
 
 class BaseUnscopedMethodTestCase(BaseScopingTestCase):

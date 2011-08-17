@@ -819,7 +819,7 @@ class Base(object):
         base_scope = cls.current_scope() or cls.relation()
         rel = cls._apply_scope_options(base_scope, options)
 
-        if rel:
+        if rel is not None:
             cls._scoped_methods.append(rel)
 
     @classmethod
