@@ -20,10 +20,12 @@ Basic Usage
 This is an example of a Person model::
 
     class Person(pyperry.base.Base):
-        def config(cls):
-            # Define attributes
-            cls.attributes('id', 'name', 'favorite_color')
+        # Define attributes
+        id = Attribute()
+        name = Attribute()
+        favorite_color = Attribute()
 
+        def config(cls):
             # Basic adapter configuration
             cls.configure('read', type='bertrpc', procedure='person')
             cls.add_middleware('read', MyMiddleware, config='val')

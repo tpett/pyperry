@@ -2,6 +2,7 @@ import tests
 import unittest
 import pyperry
 from pyperry import errors
+from pyperry.attribute import Attribute
 
 from fixtures.test_adapter import TestAdapter
 
@@ -26,8 +27,9 @@ class BaseRelationTestCase(unittest.TestCase):
     def setUp(self):
         # Used for testing
         class Test(pyperry.Base):
+            id = Attribute()
+
             def _config(c):
-                c.attributes('id')
                 c.configure('read', adapter=TestAdapter)
                 c.scope('foo', where='bar')
         self.Test = Test

@@ -3,6 +3,7 @@ import unittest
 
 import pyperry
 from pyperry.middlewares import ModelBridge
+from pyperry.attribute import Attribute
 from tests.fixtures.test_adapter import TestAdapter
 from tests.fixtures.test_adapter import SuccessAdapter
 from tests.fixtures.test_adapter import FailureAdapter
@@ -78,8 +79,9 @@ class ModelBridgeReadTestCase(ModelBridgeBaseTestCase):
 
 
 class BridgeTest(Test):
+    id = Attribute()
+
     def _config(cls):
-        cls.attributes('id')
         cls.configure('read', adapter=TestAdapter)
 
 

@@ -9,6 +9,7 @@ from pyperry import errors
 from pyperry import Relation, Association
 from pyperry.association import BelongsTo, Has, HasMany, HasOne, HasManyThrough
 from pyperry.middlewares.local_cache import LocalCache
+from pyperry.attribute import Attribute
 
 finder_options = (Relation.singular_query_methods + Relation.plural_query_methods +
     Relation.aliases.keys())
@@ -513,13 +514,18 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
 
 
 class TargetModel(pyperry.Base):
+    id = Attribute()
+    foo = Attribute()
+    whatever_type = Attribute()
+
     def _config(c):
-        c.attributes('id', 'foo', 'whatever_type')
         c.set_primary_key('foo')
 
 class SourceModel(pyperry.Base):
+    id = Attribute()
+    bar = Attribute()
+
     def _config(c):
-        c.attributes('id', 'bar')
         c.set_primary_key('bar')
 
 class PrimaryKeyTestCase(BaseAssociationTestCase):

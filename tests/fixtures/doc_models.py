@@ -1,15 +1,21 @@
 import pyperry
+from pyperry.attribute import Attribute
 
 class DirModel(pyperry.Base):
+    id = Attribute()
+    foo = Attribute()
+    bar = Attribute()
+
     def _config(cls):
-        cls.attributes('id', 'foo', 'bar')
         cls.belongs_to('owner')
         cls.has_many('children')
 
 class HelpModel(pyperry.Base):
     """a model with a docstring"""
+    attr1 = Attribute()
+    attr2 = Attribute()
+
     def _config(cls):
-        cls.attributes('attr1', 'attr2')
         cls.belongs_to('foo', polymorphic=True)
         cls.belongs_to('ape')
         cls.has_many('bars', through='bananas')

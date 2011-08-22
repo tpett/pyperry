@@ -7,6 +7,7 @@ from pyperry import errors
 from pyperry.relation import Relation
 from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry.association import BelongsTo, HasMany, HasOne, HasManyThrough
+from pyperry.attribute import Attribute
 
 class BaseMeta(type):
     """
@@ -69,16 +70,10 @@ class BaseMeta(type):
         else:
             new.defined_associations = deepcopy(new.defined_associations)
 
-        if hasattr(new, '__configmodel__'):
-            new.__configmodel__()
-
         # Track model definitions by name
         if not mcs.defined_models.has_key(name):
             mcs.defined_models[name] = []
         mcs.defined_models[name].append(new)
-
-        new._docstring = new.__doc__
-        new.__doc__ = new.get_docstring()
 
         return new
 
@@ -86,12 +81,34 @@ class BaseMeta(type):
                 Relation.plural_query_methods +
                 ['modifiers', 'all', 'first', 'find'])
 
+    def __init__(cls, name, bases, class_dict):
+        """Class has been created now setup additional needs"""
+        # Force calling of __setattr__ for each defined attribute for special
+        # attribute handling
+        for key in class_dict.keys():
+            setattr(cls, key, class_dict[key])
+
+        # Call configuration method
+        if hasattr(cls, '__configmodel__'):
+            cls.__configmodel__()
+
+        cls._docstring = cls.__doc__
+        cls.__doc__ = cls.get_docstring()
+
     def __getattr__(cls, key):
         """Allow delegation to Relation or raise AttributeError"""
         if key in cls._relation_delegates:
             return getattr(cls.scoped(), key)
         else:
             raise AttributeError("Undefined attribute '%s'" % key)
+
+    def __setattr__(cls, key, value):
+        """Allows special handling of setting certain types of attributes"""
+        if isinstance(value, Attribute):
+            value.name = key
+            cls.defined_attributes |= set([key])
+        else:
+            type.__setattr__(cls, key, value)
 
     def __dir__(cls):
         """add the methods delegated to relation to dir() results"""

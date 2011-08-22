@@ -6,6 +6,7 @@ import pyperry
 from pyperry.middlewares import LocalCache
 from tests.fixtures.test_adapter import TestAdapter
 from pyperry.middlewares.local_cache import CacheStore
+from pyperry.attribute import Attribute
 
 class LocalCacheBaseTestCase(unittest.TestCase):
     pass
@@ -30,8 +31,9 @@ class LocalCacheInstalledTestCase(LocalCacheBaseTestCase):
         TestAdapter.count = 1
         self.cache = pyperry.middlewares.local_cache.cache_store
         class Test(pyperry.Base):
+            id = Attribute()
+
             def _config(cls):
-                cls.attributes('id')
                 cls.configure('read', adapter=TestAdapter)
                 cls.add_middleware('read', LocalCache)
         self.Test = Test

@@ -388,20 +388,25 @@ class HasManyThrough(Has):
     C{Device}::
 
         class Internet(pyperry.Base):
+            id = Attribute()
+
             def _config(cls):
-                cls.attributes('id')
                 cls.has_many('connected_devices', through='networks', source='devices')
                 cls.has_many('networks', class_name='Network')
 
         class Network(pyperry.Base):
+            id = Attribute()
+            internet_id = Attribute()
+
             def _config(cls):
-                cls.attributes('id', 'internet_id')
                 cls.belongs_to('internet', class_name='Internet')
                 cls.has_many('devices', class_name='Device')
 
         class Device(pyperry.Base):
+            id = Attribute()
+            network_id = Attribute()
+
             def _config(cls):
-                cls.attributes('id', 'network_id')
                 cls.belongs_to('network', class_name='Network')
 
     """

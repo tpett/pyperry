@@ -5,6 +5,7 @@ import copy
 
 import pyperry
 from pyperry import errors
+from pyperry.attribute import Attribute
 
 from tests.fixtures.test_adapter import TestAdapter
 import tests.fixtures.association_models
@@ -17,6 +18,7 @@ class BaseTestCase(unittest.TestCase):
 ##
 # Test the interfaces for defining attributes on pyperry.Base
 #
+# TODO: Deprecate attributes method usage
 class DefineAttributesTestCase(BaseTestCase):
 
     def test_define_attributes(self):
@@ -48,14 +50,31 @@ class DefineAttributesTestCase(BaseTestCase):
         self.assertEqual(Test.defined_attributes, set(['id', 'name', 'poop']))
 
 
+class ClassSetupTestCase(BaseTestCase):
+
+    def test_sets_name_on_attributes(self):
+        """should set the `name` attribute on all Attribute attributes"""
+        class Test(pyperry.Base):
+            id = Attribute()
+            name = Attribute()
+            poop = Attribute()
+
+        self.assertEqual(Test.id.name, 'id')
+        self.assertEqual(Test.name.name, 'name')
+        self.assertEqual(Test.poop.name, 'poop')
+
+        self.assertEqual(Test.defined_attributes, set(['id', 'name', 'poop']))
+
+
 ##
 # Test the initializer
 #
 class InitializeTestCase(BaseTestCase):
 
     def setUp(self):
-        class Test(pyperry.Base): pass
-        Test.attributes('id', 'name')
+        class Test(pyperry.Base):
+            id = Attribute()
+            name = Attribute()
         self.Test = Test
 
     def test_init_attributes(self):
@@ -107,8 +126,8 @@ class PrimaryKeyTestCase(BaseTestCase):
 
     def setUp(self):
         class Model(pyperry.Base):
-            def _config(c):
-                c.attributes('id', 'foo')
+            id = Attribute()
+            foo = Attribute()
         self.Model = Model
 
     def test_primary_key_class_methods(self):
@@ -154,8 +173,9 @@ class PrimaryKeyTestCase(BaseTestCase):
 class AttributeAccessTestCase(BaseTestCase):
 
     def setUp(self):
-        class Test(pyperry.Base): pass
-        Test.attributes('id', 'name')
+        class Test(pyperry.Base):
+            id = Attribute()
+            name = Attribute()
         self.Test = Test
         self.test = Test(dict(id=1, name='Foo'))
 
@@ -183,38 +203,38 @@ class AttributeAccessTestCase(BaseTestCase):
         self.assertRaises(KeyError, test.__getitem__, 'poop')
         self.assertRaises(KeyError, test.__setitem__, 'poop', 'foo')
 
-    def test_getter_shadowing(self):
-        """Property method getters should shadow attribute accessors"""
-        class Test(pyperry.Base):
+    # def test_getter_shadowing(self):
+    #     """Property method getters should shadow attribute accessors"""
+    #     class Test(pyperry.Base):
 
-            @property
-            def foo(self):
-                return "purple"
+    #         @property
+    #         def foo(self):
+    #             return "purple"
 
-        Test.attributes('foo')
-        test = Test({'foo': 1})
+    #     Test.attributes('foo')
+    #     test = Test({'foo': 1})
 
-        self.assertEqual(test.foo, 'purple')
-        self.assertEqual(test['foo'], 1)
+    #     self.assertEqual(test.foo, 'purple')
+    #     self.assertEqual(test['foo'], 1)
 
-    def test_setter_shadowing(self):
-        """Property method setters should shadow attribute setters"""
-        class Test(pyperry.Base):
+    # def test_setter_shadowing(self):
+    #     """Property method setters should shadow attribute setters"""
+    #     class Test(pyperry.Base):
 
-            def get_foo(self):
-                return self['foo']
+    #         def get_foo(self):
+    #             return self['foo']
 
-            def set_foo(self, val):
-                self['foo'] = "Mine"
+    #         def set_foo(self, val):
+    #             self['foo'] = "Mine"
 
-            foo = property(get_foo, set_foo)
-        Test.attributes('foo')
+    #         foo = property(get_foo, set_foo)
+    #     Test.attributes('foo')
 
-        test = Test({'foo': 1})
+    #     test = Test({'foo': 1})
 
-        self.assertEqual(test.foo, 1)
-        test.foo = 'Test'
-        self.assertEqual(test.foo, 'Mine')
+    #     self.assertEqual(test.foo, 1)
+    #     test.foo = 'Test'
+    #     self.assertEqual(test.foo, 'Mine')
 
 ##
 # Test setting of configure('read') and it merging with superclass configuration
@@ -425,8 +445,8 @@ class BaseFetchRecordsMethodTestCase(BaseTestCase):
     def test_nil_results(self):
         """should ignore None results"""
         class Test(pyperry.Base):
+            id = Attribute()
             def _config(cls):
-                cls.attributes('id')
                 cls.configure('read', adapter=TestAdapter)
         TestAdapter.data = None
         TestAdapter.count = 3
@@ -468,12 +488,12 @@ class BaseComparisonTestCase(BaseTestCase):
 
     def setUp(self):
         class Test(pyperry.Base):
-            def _config(cls):
-                cls.attributes('id', 'name')
+            id = Attribute()
+            name = Attribute()
 
         class Test2(pyperry.Base):
-            def _config(cls):
-                cls.attributes('id', 'name')
+            id = Attribute()
+            name = Attribute()
 
         self.Test = Test
         self.Test2 = Test2
@@ -775,8 +795,8 @@ class BaseScopeMethodTestCase(BaseScopingTestCase):
 class BasePersistenceTestCase(BaseTestCase):
     def setUp(self):
         TestAdapter.reset()
-        class Test(pyperry.Base): pass
-        Test.attributes('id')
+        class Test(pyperry.Base):
+            id = Attribute()
         Test.configure('read', adapter=TestAdapter)
         Test.configure('write', adapter=TestAdapter, foo='bar')
         self.Test = Test
@@ -843,8 +863,10 @@ class BaseDeleteMethodTestCase(BasePersistenceTestCase):
 #
 
 class ReloadTestModel(pyperry.Base):
-    def _config(cls):
-        cls.attributes('id', 'a', 'b')
+    id = Attribute()
+    a = Attribute()
+    b = Attribute()
+
     @classmethod
     def fetch_records(cls, relation):
         cls.last_relation = relation
@@ -876,8 +898,8 @@ class BaseReloadMethodTestCase(BasePersistenceTestCase):
 class BaseFreezeMethodsTestCase(BaseTestCase):
 
     def setUp(self):
-        class Test(pyperry.Base): pass
-        Test.attributes('id')
+        class Test(pyperry.Base):
+            id = Attribute()
         self.test_model = Test({'id':1}, False)
         self.model = pyperry.Base({})
 

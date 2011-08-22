@@ -12,6 +12,7 @@ from pyperry.response import Response
 from tests.fixtures.association_models import Test as TestModel
 import pyperry.errors as errors
 import tests.helpers.http_test_server as http_server
+from pyperry.attribute import Attribute
 
 def setup_module():
     """ensure the HTTP test server is running"""
@@ -86,7 +87,8 @@ class UrlForMethodTestCase(HttpAdapterTestCase):
 
     def test_primary_key(self):
         """should use configured primary_key in url"""
-        TestModel.attributes('id', 'foo')
+        TestModel.id = Attribute()
+        TestModel.foo = Attribute()
         model = TestModel({'id':7, 'foo':12345})
         self.config['primary_key'] = 'foo'
         adapter = RestfulHttpAdapter(self.config, mode='read')
