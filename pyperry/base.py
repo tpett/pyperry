@@ -106,7 +106,7 @@ class BaseMeta(type):
         """Allows special handling of setting certain types of attributes"""
         if isinstance(value, Attribute):
             value.name = key
-            cls.defined_attributes |= set([key])
+            cls._define_attributes(key)
         else:
             type.__setattr__(cls, key, value)
 
@@ -713,26 +713,6 @@ class Base(object):
         return cls._adapters[adapter_type]
 
     @classmethod
-    def define_attributes(cls, *attributes):
-        """
-        Define available attributes for a model.
-
-        This method is automatically called when the attributes var is set on
-        the class during definition.  Each call will union any new attributes
-        into the set of defined attributes.
-
-        aliased as C{attributes}
-
-        @param attributes: list parameters as strings, or the first argument is
-        a list of strings.
-
-        """
-        if attributes[0].__class__ in [list, set, tuple]:
-            attributes = attributes[0]
-        cls.defined_attributes |= set(attributes)
-    attributes = define_attributes
-
-    @classmethod
     def primary_key(cls):
         """
         Returns the attribute name of the model's primary key.
@@ -1034,6 +1014,23 @@ class Base(object):
         """
         cls._create_external_association(HasOne(cls, id, **kwargs))
     #}
+
+    @classmethod
+    def _define_attributes(cls, *attributes):
+        """
+        Set specified attribute to the defined_attributes `set`
+
+        This method is automatically called when attributes are set of type
+        Attribute on the class.  Each call will union any new attributes into
+        the set of defined attributes.
+
+        @param attributes: list parameters as strings, or the first argument is
+        a list of strings.
+
+        """
+        if attributes[0].__class__ in [list, set, tuple]:
+            attributes = attributes[0]
+        cls.defined_attributes |= set(attributes)
 
     @classmethod
     def _create_external_association(cls, association):

@@ -15,41 +15,6 @@ class BaseTestCase(unittest.TestCase):
     def tearDown(self):
         TestAdapter.reset()
 
-##
-# Test the interfaces for defining attributes on pyperry.Base
-#
-# TODO: Deprecate attributes method usage
-class DefineAttributesTestCase(BaseTestCase):
-
-    def test_define_attributes(self):
-        """define_attributes should append to the set defined_attributes"""
-
-        class Test(pyperry.Base): pass
-
-        self.assertEqual(len(Test.defined_attributes), 0)
-
-        Test.define_attributes(['id', 'name', 'name'])
-        self.assertEqual(len(Test.defined_attributes), 2)
-
-        Test.define_attributes(['foo_id', 'foo_id', 'id'])
-        self.assertEqual(len(Test.defined_attributes), 3)
-
-    def test_ignore_dups(self):
-        """should ignore duplicate attributes"""
-        class Test(pyperry.Base): pass
-        Test.attributes('id', 'poop', 'poop')
-
-        self.assertEqual(Test.defined_attributes, set(['id', 'poop']))
-
-    def test_takes_param_list_attributes(self):
-        """Should interpret parameter list of attributes and alias method"""
-        class Test(pyperry.Base):
-            def _config(cls):
-                cls.attributes('id', 'name', 'poop')
-
-        self.assertEqual(Test.defined_attributes, set(['id', 'name', 'poop']))
-
-
 class ClassSetupTestCase(BaseTestCase):
 
     def test_sets_name_on_attributes(self):
@@ -202,39 +167,6 @@ class AttributeAccessTestCase(BaseTestCase):
         # test.poop = 'foo' should set a new object attr 'poop'
         self.assertRaises(KeyError, test.__getitem__, 'poop')
         self.assertRaises(KeyError, test.__setitem__, 'poop', 'foo')
-
-    # def test_getter_shadowing(self):
-    #     """Property method getters should shadow attribute accessors"""
-    #     class Test(pyperry.Base):
-
-    #         @property
-    #         def foo(self):
-    #             return "purple"
-
-    #     Test.attributes('foo')
-    #     test = Test({'foo': 1})
-
-    #     self.assertEqual(test.foo, 'purple')
-    #     self.assertEqual(test['foo'], 1)
-
-    # def test_setter_shadowing(self):
-    #     """Property method setters should shadow attribute setters"""
-    #     class Test(pyperry.Base):
-
-    #         def get_foo(self):
-    #             return self['foo']
-
-    #         def set_foo(self, val):
-    #             self['foo'] = "Mine"
-
-    #         foo = property(get_foo, set_foo)
-    #     Test.attributes('foo')
-
-    #     test = Test({'foo': 1})
-
-    #     self.assertEqual(test.foo, 1)
-    #     test.foo = 'Test'
-    #     self.assertEqual(test.foo, 'Mine')
 
 ##
 # Test setting of configure('read') and it merging with superclass configuration

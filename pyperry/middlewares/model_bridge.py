@@ -15,14 +15,13 @@ class ModelBridge(object):
     each record in the list.
 
     On adapter writes and deletes, the C{ModelBridge} class updates the state
-    of the model instance being saved or deleted to reflect
-    the data stored in the Response object returned by the adapter call. This
-    includes things like updating a model's C{saved} and C{new_record}
-    attributes in addition to putting error messages on the model if the
-    adapter received an error response. Additionally, the C{ModelBridge} will
-    refresh all of the model's data attributes (specified by calling
-    C{pyperry.Base.attributes(...)}) after a successful write if a read adapter
-    is configured for the model.
+    of the model instance being saved or deleted to reflect the data stored in
+    the Response object returned by the adapter call. This includes things like
+    updating a model's C{saved} and C{new_record} attributes in addition to
+    putting error messages on the model if the adapter received an error
+    response. Additionally, the C{ModelBridge} will refresh all of the model's
+    data attributes (specified by setting a class attribute of type Attribute)
+    after a successful write if a read adapter is configured for the model.
 
     """
 
