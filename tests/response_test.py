@@ -93,16 +93,6 @@ class ResponseParsingTestCase(ResponseBaseTestCase):
         self.response.raw = '}'
         self.assertEqual(self.response.parsed(), None)
 
-    def test_ascii_strings(self):
-        """decoded objects should have ascii strings, not unicode strings"""
-        obj = { 'id': 1, 'occurrences': [1, 2, 3] }
-        self.response.raw_format = 'json'
-        self.response.raw = json.dumps(obj)
-        p = self.response.parsed()
-        for k in self.response.parsed().keys():
-            self.assertEqual(type(k), str)
-
-
 class ModelAttributesMethodTest(ResponseBaseTestCase):
 
     def test_single_item_dict(self):
