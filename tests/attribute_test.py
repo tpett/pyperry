@@ -6,12 +6,12 @@ import copy
 import pyperry
 from pyperry import errors
 
-from pyperry.attribute import Attribute
+from pyperry.field import Field
 
 from tests.fixtures.test_adapter import TestAdapter
 import tests.fixtures.association_models
 
-class CustomAttribute(Attribute):
+class CustomField(Field):
 
     def serialize(self, value):
         return str(value)
@@ -27,13 +27,13 @@ class InitMethodTestCase(AttributeTestCase):
 
     def test_keywords(self):
         """should accept keywords type and default"""
-        attr = Attribute(type=str, default=6)
+        attr = Field(type=str, default=6)
         self.assertEqual(attr.type, str)
         self.assertEqual(attr.default, 6)
 
     def test_sets_name_to_none(self):
         """should set name attribute to None"""
-        attr = Attribute()
+        attr = Field()
         self.assertEqual(attr.name, None)
 
 class DescriptorTestCase(AttributeTestCase):
@@ -64,14 +64,14 @@ class BasicDescriptorTestCase(DescriptorTestCase):
     def test_get_gets(self):
         """__get__ should pull from __getitem__ on owner"""
         self.owner['foo'] = "FunTimes!"
-        attr = Attribute()
+        attr = Field()
         attr.name = 'foo'
         self.owner.__class__.foo = attr
         self.assertEqual(self.owner.foo, 'FunTimes!')
 
     def test_set_sets(self):
         """__set__ should push to __setitem__ on owner"""
-        attr = Attribute()
+        attr = Field()
         attr.name = 'bar'
         self.owner.__class__.bar = attr
         self.owner.bar = "Setting this thing!"
@@ -79,7 +79,7 @@ class BasicDescriptorTestCase(DescriptorTestCase):
 
     def test_del_dels(self):
         """__delete__ should call __delitem__ on owner"""
-        attr = Attribute()
+        attr = Field()
         self.owner['baz'] = 42
         attr.name = 'baz'
         self.owner.__class__.baz = attr
@@ -90,14 +90,14 @@ class DescriptorWithTypeTestCase(DescriptorTestCase):
 
     def test_get_gets_with_type(self):
         """__get__ should cast value retreived to `type` if set"""
-        attr = Attribute(type=int)
+        attr = Field(type=int)
         attr.name = 'id'
         self.owner.__class__.id = attr
         self.owner['id'] = '123'
         self.assertEqual(self.owner.id, 123)
 
     def test_set_sets_with_type(self):
-        attr = Attribute(type=int)
+        attr = Field(type=int)
         attr.name = 'id'
         self.owner.__class__.id = attr
         self.owner.id = '123'
@@ -106,7 +106,7 @@ class DescriptorWithTypeTestCase(DescriptorTestCase):
 
 class CustomSerializeTestCase(DescriptorTestCase):
     """
-    This test case uses the CustomAttribute class fixture to test setting
+    This test case uses the CustomField class fixture to test setting
     custom serialize and deserialize methods for creating powerful custom
     attribute behavior
 
@@ -117,7 +117,7 @@ class CustomSerializeTestCase(DescriptorTestCase):
 
     def setUp(self):
         super(CustomSerializeTestCase, self).setUp()
-        self.attr = CustomAttribute()
+        self.attr = CustomField()
         self.attr.name = 'test_attr'
         self.owner.__class__.test_attr = self.attr
 

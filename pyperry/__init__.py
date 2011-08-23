@@ -21,9 +21,9 @@ This is an example of a Person model::
 
     class Person(pyperry.base.Base):
         # Define attributes
-        id = Attribute()
-        name = Attribute()
-        favorite_color = Attribute()
+        id = Field()
+        name = Field()
+        favorite_color = Field()
 
         def config(cls):
             # Basic adapter configuration

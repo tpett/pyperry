@@ -1,22 +1,22 @@
 import pyperry
-from pyperry.attribute import Attribute
+from pyperry.field import Field
 from pyperry.association import BelongsTo, HasMany, HasManyThrough, HasOne
 from test_adapter import TestAdapter
 
 class Test(pyperry.Base):
-    id = Attribute()
+    id = Field()
 
 class Source(pyperry.Base):
-    id = Attribute()
+    id = Field()
 
 class AssocTest(pyperry.Base):
     def _config(c):
         c.configure('read', adapter=TestAdapter)
 
 class Site(AssocTest):
-    id = Attribute()
-    name = Attribute()
-    maintainer_id = Attribute()
+    id = Field()
+    name = Field()
+    maintainer_id = Field()
 
     maintainer = BelongsTo(klass=lambda: Person)
     headline = HasOne(klass=lambda: Article)
@@ -42,11 +42,11 @@ class Site(AssocTest):
 
 
 class Article(AssocTest):
-    id = Attribute()
-    site_id = Attribute()
-    author_id = Attribute()
-    title = Attribute()
-    text = Attribute()
+    id = Field()
+    site_id = Field()
+    author_id = Field()
+    title = Field()
+    text = Field()
 
     site = BelongsTo(class_name='Site')
     author = BelongsTo(class_name='Person')
@@ -56,21 +56,21 @@ class Article(AssocTest):
     comment_authors = HasManyThrough(through='comments', source='author')
 
 class Comment(AssocTest):
-    id = Attribute()
-    person_id = Attribute()
-    parent_id = Attribute()
-    parent_type = Attribute()
-    text = Attribute()
+    id = Field()
+    person_id = Field()
+    parent_id = Field()
+    parent_type = Field()
+    text = Field()
 
     parent = BelongsTo(polymorphic=True)
     author = BelongsTo(class_name='Person', foreign_key='person_id',
             namespace='tests.fixtures.association_models')
 
 class Person(AssocTest):
-    id = Attribute()
-    name = Attribute()
-    manager_id = Attribute()
-    company_id = Attribute()
+    id = Field()
+    name = Field()
+    manager_id = Field()
+    company_id = Field()
 
     manager = BelongsTo(class_name='Person', foreign_key='manager_id')
     authored_comments = HasMany(class_name='Comment', foreign_key='person_id')
@@ -83,8 +83,8 @@ class Person(AssocTest):
     maintained_articles = HasManyThrough(through='sites', source='articles')
 
 class Company(AssocTest):
-    id = Attribute()
-    name = Attribute()
+    id = Field()
+    name = Field()
 
     employees = HasMany(class_name='Person',
             namespace='tests.fixtures.extended_association_models' )

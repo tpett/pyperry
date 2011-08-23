@@ -8,7 +8,7 @@ from pyperry.relation import Relation
 from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry.association import BelongsTo, HasMany, HasOne, HasManyThrough
 from pyperry.association import Association
-from pyperry.attribute import Attribute
+from pyperry.field import Field
 
 class BaseMeta(type):
     """
@@ -105,7 +105,7 @@ class BaseMeta(type):
 
     def __setattr__(cls, key, value):
         """Allows special handling of setting certain types of attributes"""
-        if isinstance(value, Attribute):
+        if isinstance(value, Field):
             value.name = key
             cls._define_attributes(key)
         elif isinstance(value, Association):
@@ -380,7 +380,7 @@ class Base(object):
         self.errors = {}
         self._frozen = False
 
-    #{ Attribute access
+    #{ Dict-like access
     def __getitem__(self, key):
         """
         Adds C{dict} like attribute reading
@@ -877,7 +877,7 @@ class Base(object):
         Set specified attribute to the defined_attributes `set`
 
         This method is automatically called when attributes are set of type
-        Attribute on the class.  Each call will union any new attributes into
+        Field on the class.  Each call will union any new attributes into
         the set of defined attributes.
 
         This is only a tracking method and should not be called outside of this

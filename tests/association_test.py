@@ -9,7 +9,7 @@ from pyperry import errors
 from pyperry import Relation, Association
 from pyperry.association import BelongsTo, Has, HasMany, HasOne, HasManyThrough
 from pyperry.middlewares.local_cache import LocalCache
-from pyperry.attribute import Attribute
+from pyperry.field import Field
 
 finder_options = (Relation.singular_query_methods + Relation.plural_query_methods +
     Relation.aliases.keys())
@@ -214,8 +214,8 @@ class BelongsToTestCase(BaseAssociationTestCase):
         """should return first object in scope"""
         TestAdapter.data = { 'id': 1 }
         class Test(fixtures.association_models.AssocTest):
-            id = Attribute()
-            foo_id = Attribute()
+            id = Field()
+            foo_id = Field()
 
         assoc = BelongsTo(target_klass=Test, id='foo', klass=Test)
         Test.foo = assoc
@@ -321,8 +321,8 @@ class HasManyTestCase(BaseAssociationTestCase):
         """should return first object in scope"""
         TestAdapter.data = { 'id': 1 }
         class Test(fixtures.association_models.AssocTest):
-            id = Attribute()
-            foo_id = Attribute()
+            id = Field()
+            foo_id = Field()
 
         assoc = HasMany(target_klass=Test, id='foo', klass=Test)
         Test.foo = assoc
@@ -351,8 +351,8 @@ class HasOneTestCase(BaseAssociationTestCase):
         """should return first object in scope"""
         TestAdapter.data = { 'id': 1 }
         class Test(fixtures.association_models.AssocTest):
-            id = Attribute()
-            foo_id = Attribute()
+            id = Field()
+            foo_id = Field()
 
         assoc = HasOne(target_klass=Test, id='foo', klass=Test)
         Test.foo = assoc
@@ -564,16 +564,16 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
 
 
 class TargetModel(pyperry.Base):
-    id = Attribute()
-    foo = Attribute()
-    whatever_type = Attribute()
+    id = Field()
+    foo = Field()
+    whatever_type = Field()
 
     def _config(c):
         c.set_primary_key('foo')
 
 class SourceModel(pyperry.Base):
-    id = Attribute()
-    bar = Attribute()
+    id = Field()
+    bar = Field()
 
     def _config(c):
         c.set_primary_key('bar')

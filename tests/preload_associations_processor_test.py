@@ -5,7 +5,7 @@ from nose.plugins.skip import SkipTest
 import pyperry
 from pyperry.errors import AssociationNotFound, AssociationPreloadNotSupported
 from pyperry.processors.preload_associations import PreloadAssociations
-from pyperry.attribute import Attribute
+from pyperry.field import Field
 
 from tests.fixtures.test_adapter import PreloadTestAdapter
 from tests.fixtures.association_models import Site, Article, Comment, Person
@@ -16,7 +16,7 @@ class PreloadAssociationsProcessorTestCase(unittest.TestCase):
 
     def setUp(self):
         class Model(pyperry.Base):
-            id = Attribute()
+            id = Field()
 
             def _config(c):
                 c.configure('read', adapter=PreloadTestAdapter)

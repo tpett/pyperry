@@ -1,5 +1,5 @@
 
-class Attribute(object):
+class Field(object):
     """
     An attribute descriptor to handle managing and casting attributes on Base
 
@@ -16,7 +16,7 @@ class Attribute(object):
 
     def __init__(self, type=None, default=None):
         """
-        Creates a new Attribute instance
+        Creates a new Field instance
 
         The `name` attribute must be set after instantiation!  In the designed
         workflow this happens automatically.

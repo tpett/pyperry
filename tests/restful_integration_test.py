@@ -8,14 +8,14 @@ import pyperry
 import tests.helpers.http_test_server as http_server
 from pyperry.adapter.http import RestfulHttpAdapter
 from pyperry.middlewares.model_bridge import ModelBridge
-from pyperry.attribute import Attribute
+from pyperry.field import Field
 
 def setup_module():
     tests.run_http_server()
 
 class TestModel(pyperry.Base):
-    id = Attribute()
-    foo = Attribute()
+    id = Field()
+    foo = Field()
     def _config(c):
         adapter_conf = {
             'adapter': RestfulHttpAdapter,

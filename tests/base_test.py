@@ -5,7 +5,7 @@ import copy
 
 import pyperry
 from pyperry import errors
-from pyperry.attribute import Attribute
+from pyperry.field import Field
 import pyperry.association as associations
 
 from tests.fixtures.test_adapter import TestAdapter
@@ -19,11 +19,11 @@ class BaseTestCase(unittest.TestCase):
 class ClassSetupTestCase(BaseTestCase):
 
     def test_sets_name_on_attributes(self):
-        """should set the `name` attribute on all Attribute attributes"""
+        """should set the `name` attribute on all Field attributes"""
         class Test(pyperry.Base):
-            id = Attribute()
-            name = Attribute()
-            poop = Attribute()
+            id = Field()
+            name = Field()
+            poop = Field()
 
         self.assertEqual(Test.id.name, 'id')
         self.assertEqual(Test.name.name, 'name')
@@ -34,7 +34,7 @@ class ClassSetupTestCase(BaseTestCase):
     def test_sets_target_and_id_on_associations(self):
         """should set target_klass and id on instances of Association"""
         class Test(pyperry.Base):
-            foo_id = Attribute()
+            foo_id = Field()
             foo = associations.HasMany()
 
         self.assertEqual(Test.foo.id, 'foo')
@@ -48,8 +48,8 @@ class InitializeTestCase(BaseTestCase):
 
     def setUp(self):
         class Test(pyperry.Base):
-            id = Attribute()
-            name = Attribute()
+            id = Field()
+            name = Field()
         self.Test = Test
 
     def test_init_attributes(self):
@@ -101,8 +101,8 @@ class PrimaryKeyTestCase(BaseTestCase):
 
     def setUp(self):
         class Model(pyperry.Base):
-            id = Attribute()
-            foo = Attribute()
+            id = Field()
+            foo = Field()
         self.Model = Model
 
     def test_primary_key_class_methods(self):
@@ -149,8 +149,8 @@ class AttributeAccessTestCase(BaseTestCase):
 
     def setUp(self):
         class Test(pyperry.Base):
-            id = Attribute()
-            name = Attribute()
+            id = Field()
+            name = Field()
         self.Test = Test
         self.test = Test(dict(id=1, name='Foo'))
 
@@ -387,7 +387,7 @@ class BaseFetchRecordsMethodTestCase(BaseTestCase):
     def test_nil_results(self):
         """should ignore None results"""
         class Test(pyperry.Base):
-            id = Attribute()
+            id = Field()
             def _config(cls):
                 cls.configure('read', adapter=TestAdapter)
         TestAdapter.data = None
@@ -430,12 +430,12 @@ class BaseComparisonTestCase(BaseTestCase):
 
     def setUp(self):
         class Test(pyperry.Base):
-            id = Attribute()
-            name = Attribute()
+            id = Field()
+            name = Field()
 
         class Test2(pyperry.Base):
-            id = Attribute()
-            name = Attribute()
+            id = Field()
+            name = Field()
 
         self.Test = Test
         self.Test2 = Test2
@@ -738,7 +738,7 @@ class BasePersistenceTestCase(BaseTestCase):
     def setUp(self):
         TestAdapter.reset()
         class Test(pyperry.Base):
-            id = Attribute()
+            id = Field()
         Test.configure('read', adapter=TestAdapter)
         Test.configure('write', adapter=TestAdapter, foo='bar')
         self.Test = Test
@@ -805,9 +805,9 @@ class BaseDeleteMethodTestCase(BasePersistenceTestCase):
 #
 
 class ReloadTestModel(pyperry.Base):
-    id = Attribute()
-    a = Attribute()
-    b = Attribute()
+    id = Field()
+    a = Field()
+    b = Field()
 
     @classmethod
     def fetch_records(cls, relation):
@@ -841,7 +841,7 @@ class BaseFreezeMethodsTestCase(BaseTestCase):
 
     def setUp(self):
         class Test(pyperry.Base):
-            id = Attribute()
+            id = Field()
         self.test_model = Test({'id':1}, False)
         self.model = pyperry.Base({})
 
