@@ -6,6 +6,7 @@ import copy
 import pyperry
 from pyperry import errors
 from pyperry.attribute import Attribute
+import pyperry.association as associations
 
 from tests.fixtures.test_adapter import TestAdapter
 import tests.fixtures.association_models
@@ -29,6 +30,15 @@ class ClassSetupTestCase(BaseTestCase):
         self.assertEqual(Test.poop.name, 'poop')
 
         self.assertEqual(Test.defined_attributes, set(['id', 'name', 'poop']))
+
+    def test_sets_target_and_id_on_associations(self):
+        """should set target_klass and id on instances of Association"""
+        class Test(pyperry.Base):
+            foo_id = Attribute()
+            foo = associations.HasMany()
+
+        self.assertEqual(Test.foo.id, 'foo')
+        self.assertEqual(Test.foo.target_klass, Test)
 
 
 ##
@@ -163,7 +173,7 @@ class AttributeAccessTestCase(BaseTestCase):
         """Undefined attributes should raise AttributeError and KeyError"""
         test = self.test
 
-        self.assertRaises(AttributeError, test.__getattr__, 'poop')
+        self.assertRaises(AttributeError, getattr, test, 'poop')
         # test.poop = 'foo' should set a new object attr 'poop'
         self.assertRaises(KeyError, test.__getitem__, 'poop')
         self.assertRaises(KeyError, test.__setitem__, 'poop', 'foo')
@@ -861,62 +871,7 @@ class BaseFreezeMethodsTestCase(BaseTestCase):
 # Methods for managing the associations on a model
 #
 class BaseAssociationTestCase(BaseTestCase):
-
-    def setUp(self):
-        class Test(pyperry.Base):
-            attributes = ['id']
-
-        self.Test = Test
-        self.Test.belongs_to('something')
-        self.Test.has_many('things')
-        self.Test.has_one('thing')
-
-class BaseBelongsToMethodTestCase(BaseAssociationTestCase):
-
-    def test_class_method(self):
-        """should be a class method"""
-        self.assertEqual(self.Test.belongs_to.im_self.__name__, 'Test')
-
-    def test_defined_associations(self):
-        """should add to the defined_associations dict"""
-        self.assertEqual(True, len(self.Test.defined_associations) > 0)
-
-    def test_instance(self):
-        """should be an instance of BelongsTo"""
-        self.assertEqual(True, type(self.Test.defined_associations['something']) is pyperry.association.BelongsTo)
-
-class BaseHasManyMethodTestCase(BaseAssociationTestCase):
-
-    def test_class_method(self):
-        """should be a class method"""
-        self.assertEqual(self.Test.has_many.im_self.__name__, 'Test')
-
-    def test_defined_associations(self):
-        """should add to the defined_associations dict"""
-        self.assertEqual(True, len(self.Test.defined_associations) > 0)
-
-    def test_instance(self):
-        """should be an instance of HasMany"""
-        self.assertEqual(True, type(self.Test.defined_associations['things']) is pyperry.association.HasMany)
-
-    def test_has_many_through(self):
-        self.Test.has_many('assertions', through='test_methods')
-        self.assertEqual(type(self.Test.defined_associations['assertions']),
-                         pyperry.association.HasManyThrough)
-
-class BaseHasOneMethodTestCase(BaseAssociationTestCase):
-
-    def test_class_method(self):
-        """should be a class method"""
-        self.assertEqual(self.Test.has_one.im_self.__name__, 'Test')
-
-    def test_defined_associations(self):
-        """should add to the defined_associations dict"""
-        self.assertEqual(True, len(self.Test.defined_associations) > 0)
-
-    def test_instance(self):
-        """should be an instance of HasOne"""
-        self.assertEqual(True, type(self.Test.defined_associations['thing']) is pyperry.association.HasOne)
+    pass
 
 class AssociationCachingTest(BaseAssociationTestCase):
 
@@ -924,19 +879,15 @@ class AssociationCachingTest(BaseAssociationTestCase):
         self.Site = tests.fixtures.association_models.Site
         self.site = self.Site({})
 
-    def test_create_methods(self):
-        """should create the association method on the first call"""
-        self.assertFalse('articles' in self.site.__dict__)
-        self.site.articles()
-        self.assertTrue('articles' in self.site.__dict__)
-
     def test_cache_association(self):
         """should cache the result of the association after the first call"""
-        self.assertFalse('_articles' in self.site.__dict__)
-        self.site.articles()
-        self.assertTrue('_articles' in self.site.__dict__)
+        self.assertFalse('_articles_cache' in self.site.__dict__)
+        self.site.articles
+        self.assertTrue('_articles_cache' in self.site.__dict__)
 
     def test_add_maually(self):
         """should allow the result of the association to be set manually"""
         self.site.articles = 'foo'
-        self.assertEqual(self.site.articles(), 'foo')
+        self.assertEqual(self.site._articles_cache, 'foo')
+        self.assertEqual(self.site.articles, 'foo')
+

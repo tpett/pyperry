@@ -7,6 +7,7 @@ from pyperry import errors
 from pyperry.relation import Relation
 from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry.association import BelongsTo, HasMany, HasOne, HasManyThrough
+from pyperry.association import Association
 from pyperry.attribute import Attribute
 
 class BaseMeta(type):
@@ -107,8 +108,12 @@ class BaseMeta(type):
         if isinstance(value, Attribute):
             value.name = key
             cls._define_attributes(key)
-        else:
-            type.__setattr__(cls, key, value)
+        elif isinstance(value, Association):
+            value.id = key
+            value.target_klass = cls
+            cls.defined_associations[key] = value
+
+        type.__setattr__(cls, key, value)
 
     def __dir__(cls):
         """add the methods delegated to relation to dir() results"""
@@ -418,58 +423,6 @@ class Base(object):
             self.attributes[key] = value
         else:
             raise KeyError("Undefined attribute '%s'" % key)
-
-    def __getattr__(self, key):
-        """
-        Dynamic attribute / association reading
-
-        Properties or Methods are not created for attributes or associations,
-        and are instead handled by this method.  This allows a model to
-        override the default behavior of attribute or association access by
-        creating a property or method (respectively) of the same name.
-
-        Allows::
-
-            animal.name
-            animal.friends()
-
-        @raise AttributeError: if key is not a defined attribute or
-        association.
-
-        @param key: name of the attribute attempting to be accessed
-
-        """
-        if key in self.defined_attributes:
-            return self[key]
-        elif key in self.defined_associations:
-            return self._association_method(key)
-        else:
-            raise AttributeError("object '%s' has no attribute '%s'" %
-                (self.__class__.__name__, key))
-
-    def __setattr__(self, key, value):
-        """
-        Dynamic attribute setting
-
-        Properties are not created for setting attributes.  This method allows
-        setting any defined attributes through the standard writer interface.
-
-        Allows::
-
-            animal.name = "Perry"
-            animal.type = "Platypus
-
-        @param key: name of the attribute to set
-        @param value: value to set the C{key} attribute to
-
-        """
-        if (key in self.defined_attributes
-                and not self._has_writer_property(key)):
-            self[key] = value
-        elif key in self.defined_associations and not callable(value):
-            setattr(self, '_' + key, value)
-        else:
-            object.__setattr__(self, key, value)
 
     def __dir__(self):
         """
@@ -918,103 +871,6 @@ class Base(object):
         return scope
     #}
 
-    #{ Association Declaration
-    @classmethod
-    def belongs_to(cls, id, **kwargs):
-        """
-        Create a belongs association
-
-        Defines a belongs association by the name specified by C{id}, and you
-        can access the association through a method by this name will be
-        created.  A call to this method will run the query for this association
-        and return the result, or, if this query has been run previously (or if
-        it was eager loaded), it will return the cached result.
-
-        In addition to keywords listed below this method also accepts all of
-        the query finder options specified on L{Relation}
-
-        @param id: name of the association
-        @keyword class_name: Unambiguous name (string) of source class
-        (required).
-        @keyword klass: Can be used in place of C{class_name} -- the source
-        class.
-        @keyword primary_key: Primary key of source model (default: primary key
-        of source model)
-        @keyword foreign_key: Foreign key of the target model (default: id + '_id')
-        @keyword polymorphic: Set to True if this is a polymorphic association.
-        Class name will be looked for in the (id + '_type') field. (default:
-        False)
-        @keyword namespace: For polymorphic associations set the full or
-        partial namespace to prepend to the '_type' field. (default: None)
-        @return: None
-
-        """
-        cls._create_external_association(BelongsTo(cls, id, **kwargs))
-
-    @classmethod
-    def has_many(cls, id, **kwargs):
-        """
-        Create has collection association
-
-        Defines a has association by the name specified by C{id}.  After adding
-        this association you will be able to access it through a method named
-        the same as the association.  This method will return an instance of
-        L{Relation} representing the query to be run.  You can treat the
-        resulting object as a list of results, and the query will be executed
-        whenever necessary.  This allows you to chain additional scopes on the
-        query before executing (e.g.  person.addresses().primary()).
-
-        In addition to keywords listed below this method also accepts all of
-        the query finder options specified on L{Relation}
-
-        @param id: name of the association
-        @keyword class_name: Unambiguous name (string) of source class
-        (required).
-        @keyword klass: Can be used in place of C{class_name} -- the source
-        class.
-        @keyword primary_key: Primary key of target model (default: primary key
-        of target model)
-        @keyword foreign_key: Foreign key on the source model (default: id + '_id')
-        @keyword as_: When source is polymorphic this will specify the class
-        name to use (required when source is polymorphic).
-        @return: None
-
-        """
-        if 'through' in kwargs:
-            cls._create_external_association(HasManyThrough(cls, id, **kwargs))
-        else:
-            cls._create_external_association(HasMany(cls, id, **kwargs))
-
-    @classmethod
-    def has_one(cls, id, **kwargs):
-        """
-        Create singular has association
-
-        Defines a has association by the name specified by C{id}, and allows
-        access to the association by a method of the same name.  A call to that
-        method will run the query for this association and return the resulting
-        object, or, if the query has been run previously (or it was eager
-        loaded), it will return the cached result.
-
-        In addition to keywords listed below this method also accepts all of
-        the query finder options specified on L{Relation}
-
-        @param id: name of the association
-        @keyword class_name: Unambiguous name (string) of source class
-        (required).
-        @keyword klass: Can be used in place of C{class_name} -- the source
-        class.
-        @keyword primary_key: Primary key of target model (default: primary key
-        of target model)
-        @keyword foreign_key: Foreign key on the source model (default: id + '_id')
-        @keyword as_: When source is polymorphic this will specify the class
-        name to use (required when source is polymorphic).
-        @return: None
-
-        """
-        cls._create_external_association(HasOne(cls, id, **kwargs))
-    #}
-
     @classmethod
     def _define_attributes(cls, *attributes):
         """
@@ -1024,6 +880,9 @@ class Base(object):
         Attribute on the class.  Each call will union any new attributes into
         the set of defined attributes.
 
+        This is only a tracking method and should not be called outside of this
+        class.
+
         @param attributes: list parameters as strings, or the first argument is
         a list of strings.
 
@@ -1031,35 +890,6 @@ class Base(object):
         if attributes[0].__class__ in [list, set, tuple]:
             attributes = attributes[0]
         cls.defined_attributes |= set(attributes)
-
-    @classmethod
-    def _create_external_association(cls, association):
-        cls.defined_associations[association.id] = association
-
-    def _association_method(self, association_id):
-        """
-        Defines an association method on this instance and returns that method.
-        The association method calls the matching association in
-        self.defined_associations then caches and returns the result.
-
-        """
-        def method():
-            cache_attr = '_' + association_id
-            if not hasattr(self, cache_attr):
-                association = self.defined_associations[association_id]
-                setattr(self, cache_attr, association(self))
-            return getattr(self, cache_attr)
-
-        setattr(self, association_id, method)
-        return getattr(self, association_id)
-
-    def _has_writer_property(self, key):
-        """Return True iff key is a property with a setter"""
-        value = self.__class__.__dict__.get(key)
-        if value and hasattr(value, 'fset') and getattr(value, 'fset'):
-            return True
-        else:
-            return False
 
     @classmethod
     def _parse_scope_options(cls, *args, **kwargs):

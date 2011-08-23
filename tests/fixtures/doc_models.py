@@ -1,30 +1,29 @@
 import pyperry
 from pyperry.attribute import Attribute
+from pyperry.association import BelongsTo, HasOne, HasMany, HasManyThrough
 
 class DirModel(pyperry.Base):
     id = Attribute()
     foo = Attribute()
     bar = Attribute()
 
-    def _config(cls):
-        cls.belongs_to('owner')
-        cls.has_many('children')
+    owner = BelongsTo()
+    children = HasMany()
 
 class HelpModel(pyperry.Base):
     """a model with a docstring"""
     attr1 = Attribute()
     attr2 = Attribute()
 
-    def _config(cls):
-        cls.belongs_to('foo', polymorphic=True)
-        cls.belongs_to('ape')
-        cls.has_many('bars', through='bananas')
-        cls.has_many('bananas')
+    foo = BelongsTo(polymorphic=True)
+    ape = BelongsTo()
+    bars = HasManyThrough(through='bananas')
+    bananas = HasMany()
 
 class AssociationModel(pyperry.Base):
-    def _config(cls):
-        cls.belongs_to('you')
-        cls.belongs_to('foo', polymorphic=True)
-        cls.has_one('bar')
-        cls.has_many('bizs')
-        cls.has_many('bazs', through='bizs')
+    you = BelongsTo()
+    foo = BelongsTo(polymorphic=True)
+    bar = HasOne()
+    bizs = HasMany()
+    bazs = HasManyThrough(through='bizs')
+

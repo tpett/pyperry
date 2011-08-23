@@ -74,20 +74,20 @@ class PreloadAssociationsProcessorTestCase(unittest.TestCase):
         call_count = len(self.adapter.calls)
 
         # has_many
-        self.assertEqual(type(site.articles()), pyperry.Relation)
-        for article in site.articles():
+        self.assertEqual(type(site.articles), pyperry.Relation)
+        for article in site.articles:
             self.assertEqual(type(article), Article)
 
         # has_many polymorphic
-        self.assertEqual(type(site.comments()), pyperry.Relation)
-        for comment in site.comments():
+        self.assertEqual(type(site.comments), pyperry.Relation)
+        for comment in site.comments:
             self.assertEqual(type(comment), Comment)
 
         # belongs_to
-        self.assertEqual(type(site.maintainer()), Person)
+        self.assertEqual(type(site.maintainer), Person)
 
         # has_one
-        self.assertEqual(type(site.headline()), Article)
+        self.assertEqual(type(site.headline), Article)
 
         # Ensure no more calls were made during our assertions
         self.assertEqual(len(self.adapter.calls), call_count)
@@ -101,17 +101,17 @@ class PreloadAssociationsProcessorTestCase(unittest.TestCase):
 
         for site in sites:
             # has_many
-            for article in site.articles():
+            for article in site.articles:
                 self.assertEqual(article.site_id, site.id)
             # has_many polymorphic
-            for comment in site.comments():
+            for comment in site.comments:
                 self.assertEqual(comment.parent_id, site.id)
                 self.assertEqual(comment.parent_type, 'Site')
             # belongs_to
-            self.assertEqual(site.maintainer().id, site.maintainer_id)
+            self.assertEqual(site.maintainer.id, site.maintainer_id)
             # has_one
             if site.id == 1:
-                self.assertEqual(site.headline().site_id, site.id)
+                self.assertEqual(site.headline.site_id, site.id)
 
         call_count = len(self.adapter.calls)
 
@@ -137,8 +137,8 @@ class PreloadAssociationsProcessorTestCase(unittest.TestCase):
         article_relation = site.defined_associations['articles'].scope(site)
         comment_relation = site.defined_associations['comments'].scope(site)
 
-        self.assertEqual(site.articles().query(), article_relation.query())
-        self.assertEqual(site.comments().query(), comment_relation.query())
+        self.assertEqual(site.articles.query(), article_relation.query())
+        self.assertEqual(site.comments.query(), comment_relation.query())
 
     def test_nested_includes(self):
         """should nest includes queries using a tree like syntax"""

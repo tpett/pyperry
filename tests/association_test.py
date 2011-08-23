@@ -26,10 +26,12 @@ class GenericAssociationTestCase(BaseAssociationTestCase):
         self.primary_key = 'primary_key'
         self.foreign_key = 'foreign_key'
         self.source_class = fixtures.association_models.Source
-        self.association = Association(self.klass, self.id, **self.args)
+        self.association = Association(**self.args)
+        self.association.target_klass = self.klass
+        self.association.id = self.id
 
     def test_initialize(self):
-        """should take klass, id, and kwarg arguments on initialize"""
+        """should take kwarg arguments on initialize"""
         self.assertEqual(self.klass, self.association.target_klass)
         self.assertEqual(self.id, self.association.id)
         self.assertEqual(self.args, self.association.options)
@@ -62,20 +64,24 @@ class GenericAssociationTestCase(BaseAssociationTestCase):
     def test_eager_loadable(self):
         """should be eager_loadable when the moethods do not rely
         on instance data"""
-        association = BelongsTo(self.klass, self.id)
+        association = BelongsTo(target_klass=self.klass, id=self.id)
         self.assertEqual(True, association.eager_loadable())
 
     def test_eager_loadable_lambda(self):
         """should return false if a block is used for the param of
         any finder option"""
         for option in finder_options:
-            self.assertEqual(False, Association(self.klass, self.id, **{
-                option: lambda x: {}
-            }).eager_loadable())
+            self.assertEqual(False, Association(
+                target_klass=self.klass,
+                id=self.id,
+                **{
+                    option: lambda x: {}
+                }
+            ).eager_loadable())
 
     def test_eager_loadable_poly(self):
         """should return false for polymorphic belongs to associations"""
-        association = BelongsTo(self.klass, self.id, polymorphic=True)
+        association = BelongsTo(target_klass=self.klass, id=self.id, polymorphic=True)
         self.assertEqual(association.eager_loadable(), False)
 
     def test_source_klass(self):
@@ -130,7 +136,7 @@ class BelongsToTestCase(BaseAssociationTestCase):
         self.klass = fixtures.association_models.Test
         self.id = 'belongs'
         self.foreign_key = 'some_id'
-        self.belongs_to = BelongsTo(self.klass, self.id)
+        self.belongs_to = BelongsTo(target_klass=self.klass, id=self.id)
         self.article = fixtures.association_models.Article
         self.comment = fixtures.association_models.Comment
 
@@ -156,7 +162,7 @@ class BelongsToTestCase(BaseAssociationTestCase):
         """should return true for polymorphic if polymorphic options specified
         and false otherwise"""
         self.assertFalse(self.belongs_to.polymorphic())
-        belongs = BelongsTo(self.comment, 'parent', polymorphic=True)
+        belongs = BelongsTo(target_klass=self.comment, id='parent', polymorphic=True)
         self.assertTrue(belongs.polymorphic())
         comment = self.comment({ 'parent_id': 1, 'parent_type': 'Article' })
         scope = belongs.scope(comment)
@@ -165,7 +171,7 @@ class BelongsToTestCase(BaseAssociationTestCase):
 
     def test_polymorphic_type(self):
         """should return #{id}_type if it is polymorphic"""
-        belongs = BelongsTo(self.klass, 'bar', polymorphic=True)
+        belongs = BelongsTo(target_klass=self.klass, id='bar', polymorphic=True)
         self.assertEqual('bar_type', belongs.polymorphic_type())
 
     # scope tests
@@ -204,7 +210,19 @@ class BelongsToTestCase(BaseAssociationTestCase):
         self.assertRaises(errors.AssociationPreloadNotSupported,
                           association.scope, records)
 
+    def test_get_descriptor(self):
+        """should return first object in scope"""
+        TestAdapter.data = { 'id': 1 }
+        class Test(fixtures.association_models.AssocTest):
+            id = Attribute()
+            foo_id = Attribute()
 
+        assoc = BelongsTo(target_klass=Test, id='foo', klass=Test)
+        Test.foo = assoc
+        instance = Test(foo_id=1)
+
+        self.assertEqual(Test.foo, assoc)
+        self.assertEqual(type(instance.foo), Test)
 
 class HasTestCase(BaseAssociationTestCase):
 
@@ -213,7 +231,7 @@ class HasTestCase(BaseAssociationTestCase):
         self.klass = fixtures.association_models.Test
         self.id = 'has'
         self.foreign_key = 'some_id'
-        self.has = Has(self.klass, self.id)
+        self.has = Has(target_klass=self.klass, id=self.id)
         self.article = fixtures.association_models.Article
 
     def test_primary_key(self):
@@ -224,7 +242,8 @@ class HasTestCase(BaseAssociationTestCase):
     def test_polymorphic(self):
         """should return set polymorphic true if 'as' option passed and false otherwise"""
         self.assertEqual(False, self.has.polymorphic())
-        self.assertTrue(Has(self.klass, 'bar', as_='parent').polymorphic())
+        self.assertTrue(Has(target_klass=self.klass, id='bar',
+            as_='parent').polymorphic())
 
     def test_foreign_key(self):
         """should return the lowercase target class name followed by _id if association is not polymorphic"""
@@ -233,7 +252,7 @@ class HasTestCase(BaseAssociationTestCase):
 
     def test_foreign_key_option(self):
         """should use 'foreign_key' option if specified"""
-        a = Has(self.klass, 'bar', foreign_key='purple_monkey')
+        a = Has(target_klass=self.klass, id='bar', foreign_key='purple_monkey')
         self.assertEqual('purple_monkey', a.foreign_key)
 
     # scope tests
@@ -288,7 +307,7 @@ class HasManyTestCase(BaseAssociationTestCase):
         self.klass = fixtures.association_models.Test
         self.id = 'has_many'
         self.foreign_key = 'some_id'
-        self.has_many = HasMany(self.klass, self.id)
+        self.has_many = HasMany(target_klass=self.klass, id=self.id)
 
     def test_type(self):
         """should set type to has_many"""
@@ -298,13 +317,27 @@ class HasManyTestCase(BaseAssociationTestCase):
         """should set collection to true"""
         self.assertTrue(self.has_many.collection())
 
+    def test_get_descriptor(self):
+        """should return first object in scope"""
+        TestAdapter.data = { 'id': 1 }
+        class Test(fixtures.association_models.AssocTest):
+            id = Attribute()
+            foo_id = Attribute()
+
+        assoc = HasMany(target_klass=Test, id='foo', klass=Test)
+        Test.foo = assoc
+        instance = Test(id=1, foo_id=1)
+
+        self.assertEqual(Test.foo, assoc)
+        self.assertEqual(type(instance.foo), Relation)
+
 class HasOneTestCase(BaseAssociationTestCase):
 
     def setUp(self):
         self.klass = fixtures.association_models.Test
         self.id = 'has_one'
         self.foreign_key = 'some_id'
-        self.has_one = HasOne(self.klass, self.id)
+        self.has_one = HasOne(target_klass=self.klass, id=self.id)
 
     def test_type(self):
         """should set type to has_one"""
@@ -314,6 +347,20 @@ class HasOneTestCase(BaseAssociationTestCase):
         """should set collection to false"""
         self.assertFalse(self.has_one.collection())
 
+    def test_get_descriptor(self):
+        """should return first object in scope"""
+        TestAdapter.data = { 'id': 1 }
+        class Test(fixtures.association_models.AssocTest):
+            id = Attribute()
+            foo_id = Attribute()
+
+        assoc = HasOne(target_klass=Test, id='foo', klass=Test)
+        Test.foo = assoc
+        instance = Test(id=1, foo_id=1)
+
+        self.assertEqual(Test.foo, assoc)
+        self.assertEqual(type(instance.foo), Test)
+
 
 class HasManyThroughTestCase(BaseAssociationTestCase):
 
@@ -322,7 +369,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
     def setUp(self):
         self.klass = fixtures.association_models.Test
         self.id = 'has_many_through'
-        self.association = HasManyThrough(self.klass, self.id)
+        self.association = HasManyThrough(target_klass=self.klass, id=self.id)
         self.adapter = TestAdapter
 
         # assign fixtures.association_models.ModelClass to self.ModelClass
@@ -349,13 +396,14 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
 
     def test_not_polymorphic(self):
         """should not allow polymorphic associations"""
-        association = HasManyThrough(self.Site, 'comments', through='articles',
-                                     as_='whatever')
+        association = HasManyThrough(target_klass=self.Site, id='comments',
+                through='articles', as_='whatever')
         self.assertEqual(association.polymorphic(), False)
 
     def test_through_exists(self):
         """should raise when through is not an existing association"""
-        association = HasManyThrough(self.Site, self.id, through='a_tunnel')
+        association = HasManyThrough(target_klass=self.Site, id=self.id,
+                through='a_tunnel')
         self.assertRaises(errors.AssociationNotFound,
                           association.proxy_association)
 
@@ -364,20 +412,22 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
         should raise when the source association is not defined on the proxy
         association's class
         """
-        association = HasManyThrough(self.Site, self.id, through='articles')
+        association = HasManyThrough(target_klass=self.Site, id=self.id,
+                through='articles')
         self.assertRaises(errors.AssociationNotFound,
                           association.source_association)
 
     def test_association_name(self):
         """should use the source association that matches the association id"""
-        association = HasManyThrough(self.Site, 'comments', through='articles')
+        association = HasManyThrough(target_klass=self.Site, id='comments',
+                through='articles')
         self.assertEqual(association.source_association().id, 'comments')
 
     def test_source_option(self):
         """
         should use the source option as the target association name if provided
         """
-        association = HasManyThrough(self.Site, 'dumb_comments',
+        association = HasManyThrough(target_klass=self.Site, id='dumb_comments',
                                      through='articles', source='comments')
         self.assertEqual(association.source_association().id, 'comments')
 
@@ -385,7 +435,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
         """should return a relation mapped to the source association's class"""
         self.adapter.data = {'id': 1}
         site = self.Site.first()
-        comments = site.article_comments()
+        comments = site.article_comments
 
         self.assertEqual(type(comments), pyperry.Relation)
         self.assertEqual(comments.klass, self.Comment)
@@ -396,7 +446,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
         site = self.Site.first()
 
         self.adapter.calls = []
-        comments = site.article_comments().all()
+        comments = site.article_comments.all()
         self.assertEqual(len(self.adapter.calls), 2)
 
     def test_when_source_is_has(self):
@@ -410,7 +460,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
         self.adapter.calls = []
 
         self.adapter.data = [{'id': 1}, {'id': 2}, {'id': 3}]
-        relation = site.article_comments()
+        relation = site.article_comments
         where_values = relation.query()['where']
         self.assertEqual(len(self.adapter.calls), 1)
 
@@ -432,7 +482,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
 
         self.adapter.data = [{'id': 1, 'name': 'a'}, {'id': 2, 'name': 'b'},
                 {'id': 3, 'name': 'c'}]
-        relation = person.maintained_articles()
+        relation = person.maintained_articles
         where_values = relation.query()['where']
         self.assertEqual(len(self.adapter.calls), 1)
 
@@ -455,7 +505,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
         self.adapter.data = [{'id': 1, 'person_id': 11},
                 {'id': 2, 'person_id': 12}, {'id': 3, 'person_id': 13}]
 
-        relation = article.comment_authors()
+        relation = article.comment_authors
         where_values = relation.query()['where']
 
         self.assertEqual(len(self.adapter.calls), 1)
@@ -477,7 +527,7 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
             {'id': 3, 'parent_id': 13, 'parent_type': 'FooBar'}
         ] # parent_type should be ignored by has many through
 
-        relation = person.commented_articles()
+        relation = person.commented_articles
         where_values = relation.query()['where']
 
         self.assertEqual(len(self.adapter.calls), 1)
@@ -535,21 +585,23 @@ class PrimaryKeyTestCase(BaseAssociationTestCase):
         should return target class's primary key if no primary_key was passed
         as a kwarg
         """
-        association = Association(TargetModel, 'whatever')
+        association = Association(target_klass=TargetModel, id='whatever')
         self.assertEqual(TargetModel.primary_key(), association.primary_key())
 
     def test_kwarg(self):
         """should use the primary key given in the kwargs"""
-        association = BelongsTo(TargetModel, 'whatever', primary_key='asdf')
+        association = BelongsTo(target_klass=TargetModel, id='whatever',
+                primary_key='asdf')
         self.assertEqual(association.primary_key(), 'asdf')
-        association = Has(TargetModel, 'whatever', primary_key='asdf')
+        association = Has(target_klass=TargetModel, id='whatever',
+                primary_key='asdf')
         self.assertEqual(association.primary_key(), 'asdf')
 
     def test_belongs_to(self):
         """
         should use the source class's primary key in a belongs to association
         """
-        association = BelongsTo(TargetModel, 'whatever',
+        association = BelongsTo(target_klass=TargetModel, id='whatever',
                                 class_name='SourceModel')
         self.assertEqual(association.primary_key(), SourceModel.primary_key())
 
@@ -558,7 +610,8 @@ class PrimaryKeyTestCase(BaseAssociationTestCase):
         should use the source class's primary key in a polymorphic belongs to
         association
         """
-        association = BelongsTo(TargetModel, 'whatever', polymorphic=True)
+        association = BelongsTo(target_klass=TargetModel, id='whatever',
+                polymorphic=True)
         target_instance = TargetModel({'whatever_type': 'SourceModel'})
         self.assertEqual(association.primary_key(target_instance),
                          SourceModel.primary_key())
@@ -567,12 +620,14 @@ class PrimaryKeyTestCase(BaseAssociationTestCase):
         """
         should use the target class's primary key in a has one association
         """
-        association = HasOne(TargetModel, 'whatever', class_name='SourceModel')
+        association = HasOne(target_klass=TargetModel, id='whatever',
+                class_name='SourceModel')
         self.assertEqual(association.primary_key(), TargetModel.primary_key())
 
     def test_has_many(self):
         """
         should use the target class's primary key in a has many association
         """
-        association = HasMany(TargetModel, 'whatever', class_name='SourceModel')
+        association = HasMany(target_klass=TargetModel, id='whatever',
+                class_name='SourceModel')
         self.assertEqual(association.primary_key(), TargetModel.primary_key())

@@ -80,15 +80,42 @@ class Association(object):
 
     """
 
-    def __init__(self, target_klass, id, **kwargs):
-        self.target_klass = target_klass
-        self.id = id
+    def __init__(self, **kwargs):
+        self.target_klass = kwargs.get('target_klass')
+        self.id = kwargs.get('id')
         self.options = kwargs
 
     def __call__(self, obj):
         if self.collection():
             return self.scope(obj)
         return self.scope(obj).first()
+
+    def __get__(self, instance, owner):
+        """get the relation/instance for this association"""
+        if instance is None:
+            return self
+        elif hasattr(instance, self.cache_id):
+            return getattr(instance, self.cache_id)
+        else:
+            val = None
+            if(self.collection()):
+                val = self.scope(instance)
+            else:
+                val = self.scope(instance).first()
+            setattr(instance, self.cache_id, val)
+            return val
+
+    def __set__(self, instance, value):
+        """sets the given value to the cache"""
+        setattr(instance, self.cache_id, value)
+
+    def __delete__(self, instance):
+        """clears the cache attribute"""
+        delattr(instance, self.cache_id)
+
+    @property
+    def cache_id(self):
+        return '_%s_cache' % self.id
 
     def type(self):
         raise NotImplementedError, 'You must define the type in subclasses.'
