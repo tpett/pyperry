@@ -31,14 +31,14 @@ class InitMethodTestCase(ScopeTestCase):
         self.assertEqual(scope.finder_options, {'where': 'foo', 'limit': 1})
 
     def test_sets_name(self):
-        """should set `name` to None or __name__ of callable if present"""
+        """should set `__name__` to None or __name__ of callable if present"""
         scope = Scope()
-        self.assertEqual(scope.name, None)
+        self.assertEqual(scope.__name__, None)
 
         @Scope
         def scope2(cls): pass
 
-        self.assertEqual(scope2.name, 'scope2')
+        self.assertEqual(scope2.__name__, 'scope2')
 
     def test_sets_model(self):
         """should set `model` to None"""

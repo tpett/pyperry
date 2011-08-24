@@ -9,6 +9,7 @@ from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry.association import BelongsTo, HasMany, HasOne, HasManyThrough
 from pyperry.association import Association
 from pyperry.field import Field
+from pyperry.scope import Scope
 
 class BaseMeta(type):
     """
@@ -112,6 +113,10 @@ class BaseMeta(type):
             value.id = key
             value.target_klass = cls
             cls.defined_associations[key] = value
+        elif isinstance(value, Scope):
+            value.__name__ = key
+            if not hasattr(cls, 'scopes'): cls.scopes = {}
+            cls.scopes[key] = value
 
         type.__setattr__(cls, key, value)
 
@@ -792,83 +797,6 @@ class Base(object):
         finally:
             cls._scoped_methods = current_scopes
 
-    @classmethod
-    def scope(cls, name_or_func, *args, **kwargs):
-        """
-        Defines a scope on the given model.
-
-        A scope can be defined in one of several ways:
-
-        Dictionary or Keyword Arguments
-
-        If your scope is simply setting a few static query arguments than this
-        is the easiest option.  Here are a few examples::
-
-            # With a dictionary
-            Model.scope('ordered', { 'order': "name" })
-
-            # With keyword arguments
-            Model.scope('awesome', where={'awesome': 1})
-            Model.scope('latest', order="created_at DESC", limit=1)
-
-        With a Lambda or Function
-
-        When your scope involves chaining other scopes, delayed values (such as
-        a relative time), or if it takes arguments then this is the preferred
-        method.  Here are a few examples::
-
-            Model.scope('awesome_ordered', lambda(cls): cls.ordered().awesome())
-
-            # Returns a scope dynamically generating condition using fictional
-            # minutes_ago function.  Without the lambda this wouldn't update
-            # each time the scope is used, but only when the code was reloaded.
-            Model.scope('recent', lambda(cls): cls.where(
-                    'created_at > %s' % minutes_ago(5))
-
-            # You can also use the method as a decorator!  Whatever you call
-            # your method will be the name of the scope.  Make sure it's unique.
-            @Model.scope
-            def name_like(cls, word):
-                return cls.where(["name LIKE '%?%", word])
-
-        These scopes can be chained. Like so::
-
-            # Returns a max of 5 records that have a name containing 'bob'
-            # ordered
-            Model.name_like('bob').ordered().limit(5)
-
-        """
-        if not hasattr(cls, 'scopes'): cls.scopes = {}
-
-        if callable(name_or_func):
-            name = name_or_func.__name__
-        elif isinstance(name_or_func, str):
-            name = name_or_func
-
-        def scope(cls, *inargs, **inkwargs):
-            if callable(name_or_func):
-                delayed = name_or_func
-            elif len(args) > 0 and callable(args[0]):
-                delayed = args[0]
-            else:
-                delayed = None
-
-            if delayed:
-                options = cls._parse_scope_options(
-                        delayed(cls, *inargs, **inkwargs))
-            elif isinstance(name_or_func, str):
-                options = cls._parse_scope_options(*args, **kwargs)
-
-            rel = cls._apply_scope_options(cls.scoped(), options)
-
-            return rel
-
-        scope.__name__ = name
-
-        cls.scopes[name] = scope
-        setattr(cls, name, types.MethodType(scope, cls, cls.__class__))
-
-        return scope
     #}
 
     @classmethod

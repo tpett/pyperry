@@ -3,6 +3,7 @@ import unittest
 import pyperry
 from pyperry import errors
 from pyperry.field import Field
+from pyperry.scope import Scope
 
 from fixtures.test_adapter import TestAdapter
 
@@ -28,10 +29,10 @@ class BaseRelationTestCase(unittest.TestCase):
         # Used for testing
         class Test(pyperry.Base):
             id = Field()
+            foo = Scope(where='bar')
 
             def _config(c):
                 c.configure('read', adapter=TestAdapter)
-                c.scope('foo', where='bar')
         self.Test = Test
         self.relation = Relation(Test)
         TestAdapter.data = { 'id': 1 }
@@ -484,7 +485,7 @@ class ModifiersTestCase(BaseRelationTestCase):
 
     def test_include_in_scopes(self):
         """modifiers should be usable in scopes"""
-        self.Test.scope('mod', modifiers={'foo': 'bar'})
+        self.Test.mod = Scope(modifiers={'foo': 'bar'})
         scoped = self.Test.scoped()
         relation = scoped.mod()
         self.assertEqual(relation.modifiers_value(), {'foo': 'bar'})

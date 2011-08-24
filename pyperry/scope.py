@@ -51,7 +51,7 @@ class Scope(object):
     def __init__(self, dict_or_callable=None, **kwargs):
         if callable(dict_or_callable):
             self.callable = dict_or_callable
-            self.name = self.callable.__name__
+            self.__name__ = self.callable.__name__
         elif isinstance(dict_or_callable, dict):
             kwargs.update(dict_or_callable)
         elif dict_or_callable is not None:
@@ -59,8 +59,8 @@ class Scope(object):
                     "Invalid Scope parameter %s.  Must be dict or callable"
                     % dict_or_callable)
 
-        if not hasattr(self, 'name'):
-            self.name = None
+        if not hasattr(self, '__name__'):
+            self.__name__ = None
 
         # Set when the attribute is fetched through __get__
         self.model = None

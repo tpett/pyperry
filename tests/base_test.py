@@ -6,6 +6,7 @@ import copy
 import pyperry
 from pyperry import errors
 from pyperry.field import Field
+from pyperry.scope import Scope
 import pyperry.association as associations
 
 from tests.fixtures.test_adapter import TestAdapter
@@ -40,6 +41,36 @@ class ClassSetupTestCase(BaseTestCase):
         self.assertEqual(Test.foo.id, 'foo')
         self.assertEqual(Test.foo.target_klass, Test)
 
+    def test_adds_to_defined_associations(self):
+        """should add association to the list of defined associations"""
+        class Test(pyperry.Base):
+            foo123 = associations.HasMany()
+
+        self.assertTrue('foo123' in Test.defined_associations.keys())
+
+    def test_sets_name_on_scope(self):
+        """should set the `__name__` attribute on Scope instance"""
+        class Test(pyperry.Base):
+            foo = Scope(where='foo')
+
+        self.assertEqual(Test.foo.__name__, 'foo')
+
+    def test_adds_scope_to_list(self):
+        """should add scope to `scopes` dict"""
+        class Test(pyperry.Base):
+            bar = Scope(where='bar')
+
+        self.assertTrue(hasattr(Test, 'scopes'))
+        self.assertTrue('bar' in Test.scopes.keys())
+
+    def test_inheritence_stomping(self):
+        """should not stomp parent classes scopes dict"""
+        class Parent(pyperry.Base):
+            base = Scope()
+        class Child(pyperry.Base):
+            child = Scope()
+
+        self.assertFalse('child' in Parent.scopes.keys())
 
 ##
 # Test the initializer
@@ -664,72 +695,6 @@ class BaseUnscopedMethodTestCase(BaseScopingTestCase):
             pass
 
         self.assertEqual(self.Test.scoped().params['where'], ['bar'])
-
-class BaseScopeMethodTestCase(BaseScopingTestCase):
-
-    def test_class_method(self):
-        """should be a class method"""
-        self.assertEqual(self.Test.scope.im_self.__name__, 'Test')
-
-    def test_accepts_dictionary(self):
-        """should accept a name then a dictionary of finder options"""
-        self.Test.scope('foo', {'where': 'foo'})
-        self.assertEqual(self.Test.foo().params['where'], ['foo'])
-
-    def test_accepts_relation(self):
-        """should accept a name then a Relation instance for this class"""
-        self.Test.scope('foo', self.Test.relation().where('foo'))
-        self.assertEqual(self.Test.foo().params['where'], ['foo'])
-
-    def test_accepts_function(self):
-        """should allow function returning a relation or dictionary"""
-        def scope1(cls):
-            return cls.where('foo')
-
-        def scope2(cls):
-            return { 'where': 'bar' }
-
-        self.Test.scope(scope1)
-        self.assertEqual(self.Test.scope1().params['where'], ['foo'])
-
-        result = self.Test.scope(scope2)
-        self.assertEqual(self.Test.scope2().params['where'], ['bar'])
-
-    def test_function_accepting_arguments(self):
-        """should allow a function with params passed at runtime"""
-        def scope(cls, name, **blah):
-            return cls.where("name like '%s'" % name).where(blah['foo'])
-
-        self.Test.scope(scope)
-        self.assertEqual(self.Test.scope('FOO', foo='bar').params['where'],
-                ["name like 'FOO'", 'bar'])
-
-    def test_accepts_named_lambda(self):
-        """should accept lambda as second parameter"""
-        self.Test.scope('foo', lambda(cls): {'where': 'baz'})
-        self.assertEqual(self.Test.foo().params['where'], ['baz'])
-
-    def test_accepts_kwargs(self):
-        """should accept a name then a list of kwargs finder_options"""
-        self.Test.scope('foo', where='foo')
-        self.assertEqual(self.Test.foo().params['where'], ['foo'])
-
-    def test_name_of_func_should_be_passed_name(self):
-        """should set __name__ on return value"""
-        scope = self.Test.scope('foo', where='foo')
-        self.assertEqual(scope.__name__, 'foo')
-
-    def test_scopes_list(self):
-        """should append scope to the scopes list"""
-        scope = self.Test.scope('foo', where='bar')
-        self.assertEqual(self.Test.scopes.get('foo'), scope)
-
-    def test_scopes_method_access(self):
-        """should allow access to a method for this scope on the class"""
-        self.Test.scope('foo', where='baz')
-        self.assertTrue(hasattr(self.Test, 'foo'))
-        rel = self.Test.foo()
-        self.assertEqual(rel.params['where'], ['baz'])
 
 ##
 # Saving and Deleting
