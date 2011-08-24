@@ -106,3 +106,11 @@ class CallableTestCase(ScopeTestCase):
         self.assertEqual(type(rel), pyperry.relation.Relation)
         self.assertEqual(rel.query(), { 'where': ['foo'] })
 
+class DefaultScopeTestCase(ScopeTestCase):
+
+    def test_exists(self):
+        self.assertTrue('DefaultScope' in dir(pyperry.scope))
+
+    def test_extends_scope(self):
+        self.assertTrue(issubclass(pyperry.scope.DefaultScope, Scope))
+

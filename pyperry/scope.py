@@ -80,3 +80,28 @@ class Scope(object):
             return self.model.scoped().apply_finder_options(
                     self.finder_options)
 
+
+class DefaultScope(Scope):
+    """
+    Add a default scoping for this model.  Same interface as Scope.
+
+    All queries will be built based on the default scope of this model.  Only
+    specify a default scope if you I{always} want the scope applied.
+    Attributes set with C{DefaultScope} aggregate.  So each call will append to
+    options from previous calls.
+
+    Note: You can bypass default scopings using the L{unscoped()} method.
+
+    Similar to arguments accepted by L{Scope}.  The only thing not
+    supported is lambdas/functions accepting additional arguments. Here are
+    some examples::
+
+        DefaultScope(where={'type': 'Foo'})
+        DefaultScope({ 'order': 'name DESC' })
+
+        @DefaultScope
+        def _default(cls):
+            return cls.where('foo')
+
+    """
+    pass

@@ -26,9 +26,7 @@ class HttpAdapterTestCase(unittest.TestCase):
             'service': 'widgets',
             'format': 'xml'
         }
-        self.adapter = RestfulHttpAdapter(self.config, mode='read')
-                       # adapter mode doesn't matter for these tests
-                       # because we aren't using __call__
+        self.adapter = RestfulHttpAdapter(self.config)
         self.model = TestModel({'id': 7})
 
     def tearDown(self):
@@ -40,12 +38,12 @@ class ConfigTestCase(HttpAdapterTestCase):
     def test_config_values_set(self):
         """should initialize config to correct values"""
         for option, value in self.config.items():
-            self.assertEqual(getattr(self.adapter.config, option), value)
+            self.assertEqual(self.adapter.config[option], value)
 
     def test_missing_host(self):
         """should raise if host is not configured"""
         del self.config['host']
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
         self.assertRaises(errors.ConfigurationError, adapter.http_request,
                           'GET', 'foo', {})
 
@@ -74,14 +72,14 @@ class UrlForMethodTestCase(HttpAdapterTestCase):
     def test_missing_service(self):
         """should raise on missing service"""
         del self.config['service']
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
         self.assertRaises(errors.ConfigurationError, adapter.url_for, 'GET',
                           self.model)
 
     def test_missing_format(self):
         """should use 'json' as the default format"""
         del self.config['format']
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
         url = adapter.url_for('GET', self.model)
         self.assertEqual(url, '/widgets/7.json')
 
@@ -91,7 +89,7 @@ class UrlForMethodTestCase(HttpAdapterTestCase):
         TestModel.foo = Field()
         model = TestModel({'id':7, 'foo':12345})
         self.config['primary_key'] = 'foo'
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
         url = adapter.url_for('GET', model)
         self.assertEqual(url, '/widgets/12345.xml')
 
@@ -122,7 +120,7 @@ class ParamsValueTestCase(HttpAdapterTestCase):
     def test_custom_serializer(self):
         custom_serializer = lambda value: 'foo' if value == 3 else 'bar'
         self.config['serializer'] = custom_serializer
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
 
         value = adapter.params_value('fudge')
         self.assertEqual(value, 'bar')
@@ -140,7 +138,7 @@ class ParamsForMethodTestCase(HttpAdapterTestCase):
     def test_with_wrapper(self):
         """should wrap the model's attributes with the given string"""
         self.config['params_wrapper'] = 'widget'
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
         params = adapter.params_for(self.model)
         self.assertEqual(params, {'widget': self.model.attributes})
 
@@ -150,7 +148,7 @@ class ParamsForMethodTestCase(HttpAdapterTestCase):
         expected = copy(self.model.attributes)
         expected.update({'foo':'bar'})
 
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
         params = adapter.params_for(self.model)
         self.assertEqual(params, expected)
 
@@ -162,7 +160,7 @@ class ParamsForMethodTestCase(HttpAdapterTestCase):
         expected = copy(self.config['default_params'])
         expected.update(copy({'widget':self.model.attributes}))
 
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
         params = adapter.params_for(self.model)
         self.assertEqual(params, expected)
 
@@ -171,16 +169,16 @@ class ParamsForMethodTestCase(HttpAdapterTestCase):
         self.config['default_params'] = {'foo':'bar'}
         expected = copy(self.config['default_params'])
 
-        adapter = RestfulHttpAdapter(self.config, mode='read')
+        adapter = RestfulHttpAdapter(self.config)
         params = adapter.params_for(self.model)
-        self.assertEqual(adapter.config.default_params, expected)
+        self.assertEqual(adapter.config['default_params'], expected)
 
 
 class ReadTestCase(HttpAdapterTestCase):
 
     def setUp(self):
         self.config = { 'host': 'localhost:8888', 'service': 'foo' }
-        self.adapter = RestfulHttpAdapter(self.config, mode='read')
+        self.adapter = RestfulHttpAdapter(self.config)
         self.records = [{'id': 1}, {'id': 2}, {'id': 3}]
         http_server.set_response(body=json.dumps(self.records))
 

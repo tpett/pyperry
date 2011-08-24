@@ -9,7 +9,7 @@ from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry.association import BelongsTo, HasMany, HasOne, HasManyThrough
 from pyperry.association import Association
 from pyperry.field import Field
-from pyperry.scope import Scope
+from pyperry.scope import Scope, DefaultScope
 
 class BaseMeta(type):
     """
@@ -105,7 +105,24 @@ class BaseMeta(type):
             raise AttributeError("Undefined attribute '%s'" % key)
 
     def __setattr__(cls, key, value):
-        """Allows special handling of setting certain types of attributes"""
+        """
+        Allows special behavior when setting class attributes.
+
+        Each of the pieces of functionality is triggered by a type of class.
+        This allows extending functionality through subclasses on any of the
+        different types.  The super class is always called regardless of type.
+        Special classes include::
+
+            - %L{Field}
+            - %L{Association}
+            - %L{DefaultScope} (special case of Scope)
+            - %L{Scope}
+
+        This method is also called for each attribute set during class creation
+        allowing for common behavior to be applied whether set during class
+        creation or directly on the class after creation.
+
+        """
         if isinstance(value, Field):
             value.name = key
             cls._define_attributes(key)
@@ -113,10 +130,18 @@ class BaseMeta(type):
             value.id = key
             value.target_klass = cls
             cls.defined_associations[key] = value
+        elif isinstance(value, DefaultScope):
+            value.model = cls
+            base_scope = cls.current_scope() or cls.relation()
+            cls._scoped_methods.append(base_scope.merge(value()))
         elif isinstance(value, Scope):
+            value.model = cls
             value.__name__ = key
             if not hasattr(cls, 'scopes'): cls.scopes = {}
             cls.scopes[key] = value
+        elif key == '__config' or key == '_%s__config' % cls.__name__:
+            for mode in AbstractAdapter.adapter_types:
+                cls.configure(mode, value.get(mode) or {})
 
         type.__setattr__(cls, key, value)
 
@@ -208,6 +233,10 @@ class BaseMeta(type):
         if extra:
             description += ' (%s)' % extra
         return description
+
+    @property
+    def reader(cls):
+        return cls.adapter('read')
 
 
 class Base(object):
@@ -487,13 +516,18 @@ class Base(object):
         @return: Returns C{True} on success or C{False} on failure
 
         """
+        if not hasattr(self, 'writer'):
+            raise errors.ConfigurationError(
+                    "You must set `writer` attribute to an instance of "
+                    "pyperry.adapters.AbstractAdapter in order to use save().")
         if self.frozen():
-            raise errors.PersistenceError('cannot save a frozen model')
-        elif self.pk_value() is None and not self.new_record:
+            raise errors.PersistenceError("cannot save a frozen model")
+        if self.pk_value() is None and not self.new_record:
             raise errors.PersistenceError(
-                    'cannot save model without a primary key value')
+                    "cannot save model without a primary key value")
 
-        return self.adapter('write')(model=self).success
+        self.last_writer_response = self.writer(model=self, mode='write')
+        return self.last_writer_response.success
 
     def update_attributes(self, attributes=None, **kwargs):
         """
@@ -534,7 +568,12 @@ class Base(object):
         @return: C{True} on success or C{False} on failure
 
         """
-        if self.frozen():
+        if not hasattr(self, 'writer'):
+            raise errors.ConfigurationError(
+                    "You must set `writer` attribute to an instance of "
+                    "pyperry.adapters.AbstractAdapter in order to use "
+                    "delete().")
+        elif self.frozen():
             raise errors.PersistenceError('cannot delete a frozen model')
         elif self.new_record:
             raise errors.PersistenceError('cannot delete a new model')
@@ -542,7 +581,8 @@ class Base(object):
             raise errors.PersistenceError(
                     'cannot delete a model without a primary key value')
 
-        return self.adapter('write')(model=self, mode='delete').success
+        self.last_writer_response = self.writer(model=self, mode='delete')
+        return self.last_writer_response.success
 
     #}
 
@@ -666,9 +706,13 @@ class Base(object):
                     "option in the %s configuration" % adapter_type)
 
         cls._adapters[adapter_type] = adapter_klass(
-                cls.adapter_config[adapter_type], mode=adapter_type)
+                cls.adapter_config[adapter_type])
 
         return cls._adapters[adapter_type]
+
+    @property
+    def writer(self):
+        return self.__class__.adapter('write')
 
     @classmethod
     def primary_key(cls):
@@ -700,7 +744,13 @@ class Base(object):
         set to false.  C{None} items are removed.
 
         """
-        return cls.adapter('read')(relation=relation)
+        if not hasattr(cls, 'reader'):
+            raise errors.ConfigurationError(
+                    "You must set `reader` attribute to an instance of "
+                    "pyperry.adapters.AbstractAdapter in order to call "
+                    "fetch_records()")
+
+        return cls.reader(relation=relation, mode='read')
 
     #{ Scoping
     @classmethod
@@ -751,33 +801,6 @@ class Base(object):
             return cls.relation().clone()
 
     @classmethod
-    def default_scope(cls, *args, **kwargs):
-        """
-        Add a default scoping for this model.
-
-        All queries will be built based on the default scope of this model.
-        Only specify a default scope if you I{always} want the scope
-        applied.  Calls to C{default_scope} aggregate.  So each call will append
-        to options from previous calls.
-
-        Note: You can bypass default scopings using the L{unscoped} method.
-
-        Similar to arguments accepted by L{scope}.  The only thing not
-        supported is lambdas/functions accepting additional arguments. Here are
-        some examples::
-
-            Model.default_scope(where={'type': 'Foo'})
-            Model.default_scope({ 'order': 'name DESC' })
-
-        """
-        options = cls._parse_scope_options(*args, **kwargs)
-        base_scope = cls.current_scope() or cls.relation()
-        rel = cls._apply_scope_options(base_scope, options)
-
-        if rel is not None:
-            cls._scoped_methods.append(rel)
-
-    @classmethod
     def unscoped(cls, function):
         """
         Execute C{function} without default scopes
@@ -818,33 +841,6 @@ class Base(object):
         if attributes[0].__class__ in [list, set, tuple]:
             attributes = attributes[0]
         cls.defined_attributes |= set(attributes)
-
-    @classmethod
-    def _parse_scope_options(cls, *args, **kwargs):
-        """Common method for parsing out scope options"""
-        if len(args) > 0 and not kwargs:
-            if isinstance(args[0], dict) or isinstance(args[0], Relation):
-                options = args[0]
-            else:
-                options = None
-        elif len(args) == 0 and kwargs:
-            options = kwargs
-        else:
-            options = None
-
-        if options is None:
-            raise errors.ArgumentError("Invalid scoping arguments (%s, %s)"
-                    % (args, kwargs))
-
-        return options
-
-    @classmethod
-    def _apply_scope_options(cls, relation, options):
-        if isinstance(options, dict):
-            return relation.apply_finder_options(options)
-        elif isinstance(options, Relation):
-            return relation.merge(options)
-
 
     def __repr__(self):
         """Return a string representation of the object"""

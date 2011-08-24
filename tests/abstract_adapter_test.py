@@ -41,7 +41,7 @@ class DummyAdapter(AbstractAdapter):
 class AdapterBaseTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.adapter = AbstractAdapter({}, mode='read')
+        self.adapter = AbstractAdapter({})
 
     def tearDown(self):
         DummyAdapter.stack_tracer = []
@@ -51,55 +51,63 @@ class AdapterBaseTestCase(unittest.TestCase):
 #
 class InitTestCase(AdapterBaseTestCase):
 
+    def test_copy_construcotr(self):
+        adapter = AbstractAdapter({ 'foo': 1 }, middlewares=[1], processors=[2])
+        copy = AbstractAdapter(adapter)
+        self.assertEqual(copy.config['foo'], 1)
+        self.assertEqual(copy.middlewares, [1])
+        self.assertEqual(copy.processors, [2])
+
     def test_accepts_dict(self):
         """accepts a dictionary to initialize"""
-        adapter = AbstractAdapter({ 'foo': 'bar' }, mode='read')
-        self.assertEqual(adapter.config.foo, 'bar')
-
-    def test_requires_mode_keyword(self):
-        """requires a valid mode keyword"""
-        self.assertRaises(errors.ConfigurationError, AbstractAdapter, {})
-        self.assertRaises(errors.ConfigurationError,
-                AbstractAdapter, {}, mode='poop')
+        adapter = AbstractAdapter({ 'foo': 'bar' })
+        self.assertEqual(adapter.config['foo'], 'bar')
 
     def test_delayed_exec(self):
         """should delay execution of callables"""
         foo_val = 'BAD'
-        adapter = AbstractAdapter({'foo': lambda: foo_val }, mode='read')
+        adapter = AbstractAdapter({'foo': lambda: foo_val })
         foo_val = 'GOOD'
-        self.assertEqual(adapter.config.foo, 'GOOD')
+        self.assertEqual(adapter.config['foo'], 'GOOD')
 
         foo_val = 'BAD'
         def foo():
             return foo_val
-        adapter = AbstractAdapter({'foo': foo }, mode='read')
+        adapter = AbstractAdapter({'foo': foo })
         foo_val = 'GOOD'
-        self.assertEqual(adapter.config.foo, 'GOOD')
+        self.assertEqual(adapter.config['foo'], 'GOOD')
 
     def test_delayed_exec_arity(self):
         """should not execute callables if ther arity is greater than 1"""
-        adapter = AbstractAdapter({'foo': lambda x: 'bar' * x}, mode='read')
-        self.assertEqual(adapter.config.foo(3), 'barbarbar')
+        adapter = AbstractAdapter({'foo': lambda x: 'bar' * x})
+        self.assertEqual(adapter.config['foo'](3), 'barbarbar')
 
         def foo(x):
             return 'bar' * x
-        adapter = AbstractAdapter({'foo': foo}, mode='read')
-        self.assertEqual(adapter.config.foo(3), 'barbarbar')
+        adapter = AbstractAdapter({'foo': foo})
+        self.assertEqual(adapter.config['foo'](3), 'barbarbar')
+
+    def test_allows_kwarg_config(self):
+        """should allow config values through kwargs"""
+        adapter = AbstractAdapter(foo='bar', middlewares=[1])
+
+        self.assertEqual(adapter.config['foo'], 'bar')
+        self.assertEqual(adapter.middlewares, [1])
 
     def test_init_middleware(self):
         """middlewares should include ModelBridge by default"""
-        adapter = AbstractAdapter({}, mode='read')
+        adapter = AbstractAdapter({})
         self.assertEqual(adapter.middlewares, [(ModelBridge, {})])
 
     def test_init_middleware_with_kwargs(self):
         """middelwares should be initialized to the middlewares key word
         argument if provided"""
-        adapter = AbstractAdapter({}, mode='read', middlewares=[1])
+        adapter = AbstractAdapter({}, middlewares=[1])
         self.assertEqual(adapter.middlewares, [1])
 
     def test_init_processors(self):
         """processors should be initialized as an empty list"""
-        adapter = AbstractAdapter({}, mode='read')
+        adapter = AbstractAdapter({})
         self.assertEqual(adapter.processors, [])
 
 
@@ -107,28 +115,27 @@ class InitTestCase(AdapterBaseTestCase):
         """
         processors should be initialized to the processors key word argument
         """
-        adapter = AbstractAdapter({}, mode='read', processors='foo')
+        adapter = AbstractAdapter({}, processors='foo')
         self.assertEqual(adapter.processors, 'foo')
 
     def test_declares_stack(self):
         """should declate a _stack attr"""
-        adapter = AbstractAdapter({}, mode='read')
+        adapter = AbstractAdapter({})
         self.assertTrue(hasattr(adapter, '_stack'))
         self.assertEquals(adapter._stack, None)
 
     def test_appends_middlewares_option(self):
         """should append _middlewares option to middlewares"""
         middlewares = [(MiddlewareA, {})]
-        adapter = AbstractAdapter({ '_middlewares': middlewares },
-            mode='read')
+        adapter = AbstractAdapter({ '_middlewares': middlewares })
         self.assertEquals(adapter.middlewares,
-                AbstractAdapter({}, mode='read').middlewares + middlewares)
+                AbstractAdapter({}).middlewares + middlewares)
 
     def test_appends_processors_option(self):
         """should append _processors option to the processors"""
         processors = ['foo']
         _processors = ['bar']
-        adapter = AbstractAdapter({'_processors': _processors}, mode='read',
+        adapter = AbstractAdapter({'_processors': _processors},
                                   processors=processors)
         self.assertEqual(adapter.processors, processors + _processors)
 
@@ -161,10 +168,10 @@ class StackMethodTestCase(AdapterBaseTestCase):
 
     def test_stack_called_in_order(self):
         """use the DummyAdapter to test middleware call order"""
-        adapter = DummyAdapter({}, mode='read',
+        adapter = DummyAdapter({},
                 middlewares=[(MiddlewareA, {}), (MiddlewareB, {})],
                 processors=[(ProcessorA, {}), (ProcessorB, {})])
-        result = adapter()
+        result = adapter(mode='read')
         self.assertEqual(DummyAdapter.stack_tracer,
                 ['pa', 'pb', 'a', 'b', 'execute', 'read'])
         self.assertEqual(result, [])
@@ -175,16 +182,16 @@ class StackMethodTestCase(AdapterBaseTestCase):
 class CallMethodTestCase(AdapterBaseTestCase):
 
     def setUp(self):
-        self.adapter = DummyAdapter({}, mode='read')
+        self.adapter = DummyAdapter({})
 
     def test_kwargs(self):
         """should pass keywords on"""
-        val = self.adapter(foo=True)
+        val = self.adapter(foo=True, mode='read')
         self.assertEqual(val, ['FOO'])
 
     def test_iterable(self):
         """should return an iterable"""
-        val = self.adapter()
+        val = self.adapter(mode='read')
         self.assertTrue( hasattr(val, '__iter__') )
 
     def test_broken_middleware(self):
@@ -217,11 +224,11 @@ class CallModeTestCase(AdapterBaseTestCase):
     def setUp(self):
         class CallModeAdapter(AbstractAdapter):
             def stack(self, **kwargs): return kwargs
-        self.adapter = CallModeAdapter({}, mode='write')
+        self.adapter = CallModeAdapter({})
 
     def test_mode_in_kwargs(self):
         """should include the adapter mode in the kwargs"""
-        kwargs = self.adapter()
+        kwargs = self.adapter(mode='write')
         self.assertEqual(kwargs['mode'], 'write')
 
     def test_allows_mode_override(self):
@@ -229,6 +236,48 @@ class CallModeTestCase(AdapterBaseTestCase):
         adapter itself"""
         kwargs = self.adapter(mode='delete')
         self.assertEqual(kwargs['mode'], 'delete')
+
+class MergeMethodTestCase(AdapterBaseTestCase):
+
+    def test_exists(self):
+        """should be a callable attribute"""
+        self.assertTrue(hasattr(AbstractAdapter, 'merge'))
+        self.assertTrue(callable(AbstractAdapter.merge))
+
+    def test_takes_instance_of_adapter(self):
+        a1 = AbstractAdapter({ 'foo': 1 })
+        a2 = AbstractAdapter({ 'bar': 2 })
+        a3 = a1.merge(a2)
+
+        self.assertEqual(a1.config['foo'], 1)
+        self.assertEqual(a2.config['bar'], 2)
+        self.assertEqual(a3.config['foo'], 1)
+        self.assertEqual(a3.config['bar'], 2)
+
+    def test_takes_dict(self):
+        a1 = AbstractAdapter({ 'foo': 1 }, middlewares=[1], processors=[2])
+        a3 = a1.merge({'bar': 2})
+
+        self.assertEqual(a3.config['foo'], 1)
+        self.assertEqual(a3.config['bar'], 2)
+        self.assertEqual(a3.middlewares, [1])
+        self.assertEqual(a3.processors, [2])
+
+    def test_takes_keywords(self):
+        a1 = AbstractAdapter({ 'foo': 1 })
+        a3 = a1.merge(bar=2)
+
+        self.assertEqual(a3.config['foo'], 1)
+        self.assertEqual(a3.config['bar'], 2)
+
+    def test_allow_middlewares_and_processors_through_kwargs(self):
+        a1 = AbstractAdapter({ 'foo': 1 }, middlewares=[1], processors=[2])
+        a3 = a1.merge(bar='2', middlewares=[1], processors=[2])
+
+        self.assertEqual(a3.config['foo'], 1)
+        self.assertEqual(a3.config['bar'], '2')
+        self.assertEqual(a3.middlewares, [1])
+        self.assertEqual(a3.processors, [2])
 
 
 class ExecuteMethodTestCase(AdapterBaseTestCase):
@@ -243,7 +292,7 @@ class ExecuteMethodTestCase(AdapterBaseTestCase):
                 self.last_called = 'write'
             def delete(self, **kwargs):
                 self.last_called = 'delete'
-        self.adapter = Test({}, mode='read')
+        self.adapter = Test({})
 
     def test_mode_option(self):
         """should call the method matching the mode given in the kwargs"""
@@ -278,7 +327,7 @@ class SocketTimeoutTestCase(AdapterBaseTestCase):
     def test_default(self):
         """default timeout should be 10 seconds"""
         socket.setdefaulttimeout(None)
-        adapter = AbstractAdapter({}, mode='read')
+        adapter = AbstractAdapter({})
         self.assertEqual(socket.getdefaulttimeout(), None)
 
     def test_global_default(self):
@@ -287,11 +336,11 @@ class SocketTimeoutTestCase(AdapterBaseTestCase):
         default is not None
         """
         socket.setdefaulttimeout(3)
-        adapter = AbstractAdapter({}, mode='read')
+        adapter = AbstractAdapter({})
         self.assertEqual(socket.getdefaulttimeout(), 3)
 
     def test_config(self):
         """socket timeout should be configurable"""
-        adapter = AbstractAdapter({'timeout': 5}, mode='read')
+        adapter = AbstractAdapter({'timeout': 5})
         self.assertEqual(socket.getdefaulttimeout(), 5)
 

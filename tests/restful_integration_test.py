@@ -40,10 +40,6 @@ class RestfulIntegrationTestCase(unittest.TestCase):
         self.assertEqual(len(middlewares), 1)
         self.assertEqual(middlewares[0][0], ModelBridge)
 
-    def test_adapter_mode(self):
-        """should have correct mode for each adapter"""
-        self.assertEqual(TestModel.adapter('write').mode, 'write')
-
     def test_query(self):
         records = [
             {'id': 1, 'foo': 'bar'},

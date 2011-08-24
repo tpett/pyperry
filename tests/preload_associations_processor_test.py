@@ -54,7 +54,7 @@ class PreloadAssociationsProcessorTestCase(unittest.TestCase):
     def test_no_effect(self):
         """should not effect a normal request"""
         self.adapter.data = self.data(1)
-        results = self.adapter(relation=self.relation)
+        results = self.adapter(relation=self.relation, mode='read')
         self.assertEqual([{'id': 1}], [r.attributes for r in results])
         self.assertEqual(len(self.adapter.calls), 1)
 

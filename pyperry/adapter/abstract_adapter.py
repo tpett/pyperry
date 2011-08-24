@@ -47,24 +47,42 @@ from pyperry.middlewares.model_bridge import ModelBridge
 class DelayedConfig(object):
     """
     Simple class that takes kwargs or a dictionary in initializer and sets
-    values to the class dictionary.  Any values set as callables with an
+    values to the `config` dictionary.  Any values set as callables with an
     arity of 0 will be evaluated when they are accessed. If the callables arity
     is greater than 0, it will not be called automatically.
     """
 
     def __init__(self, *args, **kwargs):
         """Set values in kwargs to attributes"""
-        if not kwargs and len(args) is 1:
-            kwargs = args[0]
+        self.config = {}
+
+        if len(args) == 1 and isinstance(args[0], DelayedConfig):
+            self.config = args[0].config.copy()
+        elif len(args) == 1 and isinstance(args[0], dict):
+            kwargs.update(args[0])
 
         for k, v in kwargs.items():
-            self.__dict__[k] = v
+            self.config[k] = v
 
-    def __getattribute__(self, key):
-        attr = object.__getattribute__(self, key)
-        if callable(attr) and attr.func_code.co_argcount == 0:
-            attr = attr()
-        return attr
+    def __getitem__(self, key):
+        value = self.config[key]
+
+        if callable(value) and value.func_code.co_argcount == 0:
+            value = value()
+
+        return value
+
+    def __setitem__(self, key, value):
+        self.config[key] = value
+
+    def update(self, config):
+        if isinstance(config, DelayedConfig):
+            config = config.config
+
+        self.config.update(config)
+
+    def keys(self):
+        return self.config.keys()
 
 
 class AbstractAdapter(object):
@@ -72,31 +90,30 @@ class AbstractAdapter(object):
 
     adapter_types = ['read', 'write']
 
-    def __init__(self, config, mode=None, middlewares=None, processors=[]):
+    def __init__(self, config={}, **kwargs): #middlewares=None, processors=[]):
         """
-        Create a new adapter object with the given configuration running as a
-        `mode` adapter
+        Create a new adapter object with the given configuration.
         """
-        if not middlewares:
-            middlewares = [(ModelBridge, {})]
+        if isinstance(config, AbstractAdapter):
+            self.middlewares = config.middlewares
+            self.processors = config.processors
+            config = config.config
+        else:
+            self.middlewares = kwargs.get('middlewares') or [(ModelBridge, {})]
+            self.processors = kwargs.get('processors') or []
+            config.update(kwargs)
 
         self.config = DelayedConfig(config)
-        self.mode = mode
-        self.middlewares = middlewares
-        self.processors = processors
         self._stack = None
 
-        if hasattr(self.config, 'timeout'):
-            socket.setdefaulttimeout(self.config.timeout)
+        if 'timeout' in self.config.keys():
+            socket.setdefaulttimeout(self.config['timeout'])
 
         # Add in configured middlewares
-        if hasattr(self.config, '_middlewares'):
-            self.middlewares = self.middlewares + self.config._middlewares
-        if hasattr(self.config, '_processors'):
-            self.processors = self.processors + self.config._processors
-
-        if not mode in self.adapter_types:
-            raise errors.ConfigurationError("Adapter requires `mode` keyword")
+        if '_middlewares' in self.config.keys():
+            self.middlewares = self.middlewares + self.config['_middlewares']
+        if '_processors' in self.config.keys():
+            self.processors = self.processors + self.config['_processors']
 
     @property
     def stack(self):
@@ -127,12 +144,12 @@ class AbstractAdapter(object):
 
     def __call__(self, **kwargs):
         """Makes a request to the stack"""
-        pyperry.logger.debug('%s: %s' % (self.mode, kwargs.keys()))
         if 'mode' not in kwargs:
-            kwargs.update(mode=self.mode)
+            raise errors.ConfigurationError("Must pass `mode` to adapter call")
+        pyperry.logger.debug('%s: %s' % (kwargs['mode'], kwargs.keys()))
         result = self.stack(**kwargs)
 
-        if self.mode is 'read' and not hasattr(result, '__iter__'):
+        if kwargs['mode'] is 'read' and not hasattr(result, '__iter__'):
             raise errors.BrokenAdapterStack(
                     "The adapter stack failed to return an iterable object" )
 
@@ -153,3 +170,17 @@ class AbstractAdapter(object):
     def delete(self, **kwargs):
         """Delete the object from the datastore"""
         raise NotImplementedError("You must define this method in subclasses")
+
+    def merge(self, source={}, **kwargs):
+        new = self.__class__(self)
+
+        if isinstance(source, AbstractAdapter):
+            new.config.update(source.config)
+            new.middlewares += source.middlewares
+            new.processors += source.processors
+        elif isinstance(source, dict):
+            source.update(kwargs)
+            new.config.update(source)
+
+        return new
+

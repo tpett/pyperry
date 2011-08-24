@@ -27,14 +27,13 @@ class Association(object):
 
     An example showing the difference between source and target classes::
 
-        class Car(pyperry.Base): pass
-        class Part(pyperry.Base): pass
+        class Car(pyperry.Base):
+            # Car is the target class and Part is the source class
+            parts = HasMany(class_name='Part')
 
-        # Car is the target class and Part is the source class
-        Car.has_many('parts', class_name='Part')
-
-        # Part is the target class and Car is the source class
-        Part.belongs_to('car', class_name='Car')
+        class Part(pyperry.Base):
+            # Part is the target class and Car is the source class
+            car = BelongsTo(class_name='Car')
 
         c = Car.first()
         # returns a collection of Part models (Part is the source class)
@@ -417,25 +416,21 @@ class HasManyThrough(Has):
         class Internet(pyperry.Base):
             id = Field()
 
-            def _config(cls):
-                cls.has_many('connected_devices', through='networks', source='devices')
-                cls.has_many('networks', class_name='Network')
+            connected_devices = HasManyThrough(through'networks', source='devices')
+            networks = HasMany(class_name='Network')
 
         class Network(pyperry.Base):
             id = Field()
             internet_id = Field()
 
-            def _config(cls):
-                cls.belongs_to('internet', class_name='Internet')
-                cls.has_many('devices', class_name='Device')
+            internet = BelongsTo(class_name='Internet')
+            devices = HasMany(class_name='Device')
 
         class Device(pyperry.Base):
             id = Field()
             network_id = Field()
 
-            def _config(cls):
-                cls.belongs_to('network', class_name='Network')
-
+            network = BelongsTo(class_name='Network')
     """
 
     def type(self):

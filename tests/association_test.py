@@ -567,16 +567,12 @@ class TargetModel(pyperry.Base):
     id = Field()
     foo = Field()
     whatever_type = Field()
-
-    def _config(c):
-        c.set_primary_key('foo')
+    _primary_key = 'foo'
 
 class SourceModel(pyperry.Base):
     id = Field()
     bar = Field()
-
-    def _config(c):
-        c.set_primary_key('bar')
+    _primary_key = 'bar'
 
 class PrimaryKeyTestCase(BaseAssociationTestCase):
 

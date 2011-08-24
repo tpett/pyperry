@@ -134,7 +134,7 @@ class RestfulHttpAdapter(AbstractAdapter):
         """Constructs the URL for the request"""
         self.config_value('service')
 
-        service = self.config.service
+        service = self.config['service']
         if model is not None:
             primary_key = self.config_value('primary_key', model.pk_attr())
             pk_value = getattr(model, primary_key)
@@ -153,11 +153,11 @@ class RestfulHttpAdapter(AbstractAdapter):
         """Builds and encodes a parameters dict for the request"""
         params = {}
 
-        if hasattr(self.config, 'default_params'):
-            params.update(self.config.default_params)
+        if 'default_params' in self.config.keys():
+            params.update(self.config['default_params'])
 
-        if hasattr(self.config, 'params_wrapper'):
-            params.update({self.config.params_wrapper: model.attributes})
+        if 'params_wrapper' in self.config.keys():
+            params.update({self.config['params_wrapper']: model.attributes})
         else:
             params.update(model.attributes)
 
@@ -187,8 +187,8 @@ class RestfulHttpAdapter(AbstractAdapter):
         if given. Otherwise a ConfigurationError will be thrown.
 
         """
-        if hasattr(self.config, option):
-            value = getattr(self.config, option)
+        if option in self.config.keys():
+            value = self.config[option]
         elif default is not None:
             value = default
         else:
