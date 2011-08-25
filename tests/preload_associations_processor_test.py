@@ -7,7 +7,7 @@ from pyperry.errors import AssociationNotFound, AssociationPreloadNotSupported
 from pyperry.processors.preload_associations import PreloadAssociations
 from pyperry.field import Field
 
-from tests.fixtures.test_adapter import PreloadTestAdapter
+from tests.fixtures.test_adapter import PreloadTestAdapter, TestAdapter
 from tests.fixtures.association_models import Site, Article, Comment, Person
 
 class PreloadAssociationsProcessorTestCase(unittest.TestCase):
@@ -17,17 +17,13 @@ class PreloadAssociationsProcessorTestCase(unittest.TestCase):
     def setUp(self):
         class Model(pyperry.Base):
             id = Field()
-
-            def _config(c):
-                c.configure('read', adapter=PreloadTestAdapter)
-                c.add_processor('read', PreloadAssociations)
+            reader = PreloadTestAdapter(processors=[(PreloadAssociations, {})])
 
         for klass in self.MODELS:
-            klass._adapters = {}
-            klass.configure('read', adapter=PreloadTestAdapter)
-            klass.add_processor('read', PreloadAssociations)
+            klass.reader = PreloadTestAdapter(
+                    processors=[(PreloadAssociations, {})])
 
-        self.adapter = Model.adapter('read')
+        self.adapter = Model.reader
         self.relation = Model.scoped()
         self.Model = Model
 
@@ -41,21 +37,18 @@ class PreloadAssociationsProcessorTestCase(unittest.TestCase):
         PreloadTestAdapter.data = self.data(5)
 
     def tearDown(self):
-        self.adapter.reset()
+        PreloadTestAdapter.reset_calls()
 
         # Put models back the way they were
         for klass in self.MODELS:
-            klass._adapters = {}
-            read_config = klass.adapter_config['read']
-            if '_processors' in read_config:
-                del read_config['_processors']
+            klass.reader = TestAdapter()
 
 
     def test_no_effect(self):
         """should not effect a normal request"""
         self.adapter.data = self.data(1)
         results = self.adapter(relation=self.relation, mode='read')
-        self.assertEqual([{'id': 1}], [r.attributes for r in results])
+        self.assertEqual([{'id': 1}], [r.fields for r in results])
         self.assertEqual(len(self.adapter.calls), 1)
 
     def test_run_additional_queries(self):

@@ -89,15 +89,18 @@ class InitTestCase(AdapterBaseTestCase):
 
     def test_allows_kwarg_config(self):
         """should allow config values through kwargs"""
-        adapter = AbstractAdapter(foo='bar', middlewares=[1])
+        adapter = AbstractAdapter(foo='bar', middlewares=[3])
 
         self.assertEqual(adapter.config['foo'], 'bar')
-        self.assertEqual(adapter.middlewares, [1])
+        self.assertEqual(adapter.middlewares, [3])
 
-    def test_init_middleware(self):
-        """middlewares should include ModelBridge by default"""
-        adapter = AbstractAdapter({})
-        self.assertEqual(adapter.middlewares, [(ModelBridge, {})])
+    def test_doesnt_interfere(self):
+        """should allow config values through kwargs"""
+        adapter = AbstractAdapter(foo='bar', middlewares=[3])
+
+        new_adapter = AbstractAdapter()
+        self.assertEqual(new_adapter.middlewares, [])
+        self.assertEqual(new_adapter.processors, [])
 
     def test_init_middleware_with_kwargs(self):
         """middelwares should be initialized to the middlewares key word
@@ -127,18 +130,8 @@ class InitTestCase(AdapterBaseTestCase):
     def test_appends_middlewares_option(self):
         """should append _middlewares option to middlewares"""
         middlewares = [(MiddlewareA, {})]
-        adapter = AbstractAdapter({ '_middlewares': middlewares })
-        self.assertEquals(adapter.middlewares,
-                AbstractAdapter({}).middlewares + middlewares)
-
-    def test_appends_processors_option(self):
-        """should append _processors option to the processors"""
-        processors = ['foo']
-        _processors = ['bar']
-        adapter = AbstractAdapter({'_processors': _processors},
-                                  processors=processors)
-        self.assertEqual(adapter.processors, processors + _processors)
-
+        adapter = AbstractAdapter({ 'middlewares': middlewares })
+        self.assertEquals(adapter.middlewares, middlewares)
 
 ##
 # Define NotImplemnted for read, write, and delete
@@ -201,7 +194,7 @@ class CallMethodTestCase(AdapterBaseTestCase):
             def __call__(self, **kwargs): pass
         self.adapter.middlewares = [(BrokenMiddleware, {})]
 
-        self.assertEqual(self.adapter.stack.__class__.__name__,
+        self.assertEqual(self.adapter.stack.next.__class__.__name__,
                 'BrokenMiddleware')
 
         self.assertRaises(errors.BrokenAdapterStack, self.adapter, mode='read')

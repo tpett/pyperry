@@ -380,11 +380,8 @@ class HasManyThroughTestCase(BaseAssociationTestCase):
         """reset read adapter instances for each model"""
         for m in self.MODELS:
             model = getattr(self, m)
-            model._adapters = {}
-            if '_middlewares' in model.adapter_config['read']:
-                del model.adapter_config['read']['_middlewares']
-            model.set_primary_key('id')
-
+            model.reader.clear()
+            model._primary_key = 'id'
 
     def test_type(self):
         """should set association type to has_many_through"""

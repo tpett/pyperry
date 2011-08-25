@@ -15,12 +15,12 @@ import tests.fixtures.association_models
 class BaseTestCase(unittest.TestCase):
 
     def tearDown(self):
-        TestAdapter.reset()
+        TestAdapter.reset_calls()
 
 class ClassSetupTestCase(BaseTestCase):
 
-    def test_sets_name_on_attributes(self):
-        """should set the `name` attribute on all Field attributes"""
+    def test_sets_name_on_fields(self):
+        """should set the `name` attribute on all Field instances"""
         class Test(pyperry.Base):
             id = Field()
             name = Field()
@@ -30,7 +30,7 @@ class ClassSetupTestCase(BaseTestCase):
         self.assertEqual(Test.name.name, 'name')
         self.assertEqual(Test.poop.name, 'poop')
 
-        self.assertEqual(Test.defined_attributes, set(['id', 'name', 'poop']))
+        self.assertEqual(Test.defined_fields, set(['id', 'name', 'poop']))
 
     def test_sets_target_and_id_on_associations(self):
         """should set target_klass and id on instances of Association"""
@@ -83,27 +83,6 @@ class ClassSetupTestCase(BaseTestCase):
 
         self.assertEqual(relation.query(), { 'order': ['foo'] })
 
-    def test_config_attr(self):
-        """should parse __config attr and apply to adapter_config"""
-        class Test(pyperry.Base):
-            __config = {
-                    'read': dict(adapter=TestAdapter, foo='read'),
-                    'write': dict(adapter=TestAdapter, foo='write') }
-
-        # Should get name mangled
-        self.assertTrue(hasattr(Test, '_Test__config'))
-        self.assertEqual(Test.adapter_config['read']['foo'], 'read')
-        self.assertEqual(Test.adapter_config['write']['foo'], 'write')
-
-    def test_inheritence_stomping_for_config(self):
-        class Parent(pyperry.Base):
-            __config = { 'read': dict(foo=1) }
-        class Child(Parent):
-            __config = { 'read': dict(bar=2) }
-
-        self.assertEqual(Parent.adapter_config['read'], { 'foo': 1 })
-        self.assertEqual(Child.adapter_config['read'], { 'foo': 1, 'bar': 2 })
-
 ##
 # Test the initializer
 #
@@ -115,8 +94,8 @@ class InitializeTestCase(BaseTestCase):
             name = Field()
         self.Test = Test
 
-    def test_init_attributes(self):
-        """init should set any defined attributes in the provided dict"""
+    def test_init_fields(self):
+        """init should set any defined fields in the provided dict"""
         t = self.Test({'id': 1, 'poop': 'abc'})
 
         self.assertEqual(t.id, 1)
@@ -206,7 +185,7 @@ class PrimaryKeyTestCase(BaseTestCase):
 
 
 ##
-# Test the accessors for defined attributes
+# Test the accessors for defined fields
 #
 class AttributeAccessTestCase(BaseTestCase):
 
@@ -218,13 +197,13 @@ class AttributeAccessTestCase(BaseTestCase):
         self.test = Test(dict(id=1, name='Foo'))
 
     def test_attribute_getters(self):
-        """[] and attribute based getter for defined attributes"""
+        """[] and attribute based getter for defined fields"""
         test = self.test
         self.assertEqual(test.name, 'Foo')
         self.assertEqual(test['id'], 1)
 
     def test_attribute_setters(self):
-        """[]= and attribute based setter for defined_attributes"""
+        """[]= and attribute based setter for defined_fields"""
         test = self.test
         test.id = 2
         test['name'] = 'bar'
@@ -233,7 +212,7 @@ class AttributeAccessTestCase(BaseTestCase):
         self.assertEqual(test['name'], 'bar')
 
     def test_bad_attribute_access(self):
-        """Undefined attributes should raise AttributeError and KeyError"""
+        """Undefined fields should raise AttributeError and KeyError"""
         test = self.test
 
         self.assertRaises(AttributeError, getattr, test, 'poop')
@@ -241,169 +220,6 @@ class AttributeAccessTestCase(BaseTestCase):
         self.assertRaises(KeyError, test.__getitem__, 'poop')
         self.assertRaises(KeyError, test.__setitem__, 'poop', 'foo')
 
-##
-# Test setting of configure('read') and it merging with superclass configuration
-#
-class AdapterConfigurationTestCase(BaseTestCase):
-
-    def setUp(self):
-        pass
-
-    def test_confiure_read_merge(self):
-        """setting read config should merge all dicts up the inheritance tree"""
-        class TestBase(pyperry.Base):
-            __config = { 'read': dict(poop="smells") }
-
-        class Test(TestBase):
-            __config = { 'read': dict(foo='bar') }
-
-        self.assertEqual(Test.adapter_config['read']['foo'], 'bar')
-        self.assertEqual(Test.adapter_config['read']['poop'], 'smells')
-
-        class Test2(Test):
-            __config = { 'read': dict(poop='stanks') }
-
-        self.assertEqual(Test2.adapter_config['read']['poop'], 'stanks')
-        self.assertEqual(Test.adapter_config['read']['poop'], 'smells')
-
-    def test_adapter_required(self):
-        """should complain if 'adapter' option not set"""
-        from fixtures.test_adapter import TestAdapter
-        from pyperry import errors
-        class Test(pyperry.Base):
-            __config = { 'read': dict(poop='smells') }
-
-        self.assertRaises(errors.ConfigurationError, Test.adapter, 'read')
-
-    def test_delayed_exec_configs(self):
-        """should delay calling any lambda config values until they are needed"""
-        from fixtures.test_adapter import TestAdapter
-        class Test(pyperry.Base):
-            __config = {
-                    'read': dict(adapter=TestAdapter, foo=lambda: 'barbarbar')}
-
-        adapter = Test.adapter('read', )
-        self.assertEquals(adapter.config['foo'], 'barbarbar')
-
-    def test_unique_adapters(self):
-        """adapters changes to child objects should not affect super objects"""
-        class Super(pyperry.Base): pass
-        Super.configure('read', adapter=TestAdapter, conf='super')
-
-        class Child(Super): pass
-        Child.configure('read', adapter=TestAdapter, conf='child')
-
-        super_adapter = Super.adapter('read')
-        child_adapter = Child.adapter('read')
-
-        self.assertTrue(super_adapter is not child_adapter)
-        self.assertEqual(super_adapter.config['conf'], 'super')
-        self.assertEqual(child_adapter.config['conf'], 'child')
-
-##
-# add_middleware method
-#
-class BaseAddMiddlewareMethodTestCase(BaseTestCase):
-
-    def setUp(self):
-        class Middle(object):
-            def __init__(self, adapter, options=None):
-                self.adapter = adapter
-
-            def __call__(self, **kwargs):
-                return self.adapter(**kwargs)
-        self.Middle = Middle
-
-    def test_class_method(self):
-        """should be a class method"""
-        self.assertEqual(pyperry.Base.add_middleware.im_self.__name__, 'Base')
-
-    def test_parameters(self):
-        """should require 2 params taking an optional 3rd dict / kwargs"""
-        class Test(pyperry.Base): pass
-        Test.add_middleware('read', self.Middle)
-        Test.add_middleware('read', self.Middle, { 'foo': 'bar' })
-        Test.add_middleware('read', self.Middle, foo='bar')
-
-    def test_saves_config(self):
-        """should append value to adapter_config[type] middlewares option"""
-        class Test(pyperry.Base): pass
-        Test.add_middleware('read', self.Middle, { 'foo': 'bar' })
-        self.assertEqual(Test.adapter_config['read']['_middlewares'],
-                [(self.Middle, { 'foo': 'bar' })])
-        Test.add_middleware('read', self.Middle, { 'baz': 'boo' })
-        self.assertEqual(Test.adapter_config['read']['_middlewares'],
-                [
-                    (self.Middle, { 'foo': 'bar' }),
-                    (self.Middle, { 'baz': 'boo' }) ])
-
-
-##
-# add_processor method
-#
-class BaseAddProcessorMethodTestCase(BaseTestCase):
-
-    def setUp(self):
-        class Processor(object):
-            def __init__(self, adapter, options=None):
-                self.adapter = adapter
-
-            def __call__(self, **kwargs):
-                return self.adapter(**kwargs)
-        self.Processor = Processor
-
-    def test_class_method(self):
-        """should be a class method"""
-        self.assertEqual(pyperry.Base.add_processor.im_self.__name__, 'Base')
-
-    def test_parameters(self):
-        """should require 2 params taking an optional 3rd dict / kwargs"""
-        class Test(pyperry.Base): pass
-        Test.add_processor('read', self.Processor)
-        Test.add_processor('read', self.Processor, { 'foo': 'bar' })
-        Test.add_processor('read', self.Processor, foo='bar')
-
-    def test_saves_config(self):
-        """should append value to adapter_config[type] middlewares option"""
-        class Test(pyperry.Base): pass
-        Test.add_processor('read', self.Processor, { 'foo': 'bar' })
-        self.assertEqual(Test.adapter_config['read']['_processors'],
-                [(self.Processor, { 'foo': 'bar' })])
-        Test.add_processor('read', self.Processor, { 'baz': 'boo' })
-        self.assertEqual(Test.adapter_config['read']['_processors'],
-                [
-                    (self.Processor, { 'foo': 'bar' }),
-                    (self.Processor, { 'baz': 'boo' }) ])
-
-    def test_add_processor_after_adapter(self):
-        """
-        should add processor without raising exception if adapter already
-        configured
-        """
-        class Test(pyperry.Base): pass
-        Test.configure('read', adapter='Foo')
-        Test.add_processor('read', self.Processor, { 'foo': 'bar' })
-        self.assertEqual(len(Test.adapter_config['read']['_processors']), 1)
-
-
-##
-# Adapter method
-#
-class BaseAdapterMethodTestCase(BaseTestCase):
-
-    def test_class_method(self):
-        """should be a class method"""
-        self.assertEqual(pyperry.Base.adapter.im_self.__name__, 'Base')
-
-    def test_read(self):
-        """if exists return adapter described by type"""
-        raise SkipTest
-        class Test(pyperry.Base): pass
-        Test.configure('read', adapter=TestAdapter)
-        self.assertEqual(Test.adapter('read').mode, 'read')
-
-        Test.configure('write', adapter=TestAdapter)
-        self.assertEqual(Test.adapter('write').mode, 'write')
 
 ##
 # `setup_model` method should be called after class definition if it is defined
@@ -428,19 +244,6 @@ class BaseConfigTestCase(BaseTestCase):
         """should be obfiscated after class creation"""
         self.assertTrue(not hasattr(self.Foo, '_config'))
 
-    def test_no_double_configuration(self):
-        """
-        the _config method should be called at most once and should not be
-        inherited by subclasses
-        """
-        class A(pyperry.Base):
-            def _config(cls):
-                cls.add_processor('read', 'some processor')
-        self.assertEqual(len(A.adapter_config['read']['_processors']), 1)
-
-        class B(A): pass
-        self.assertEqual(len(B.adapter_config['read']['_processors']), 1)
-
 
 class BaseFetchRecordsMethodTestCase(BaseTestCase):
 
@@ -448,8 +251,8 @@ class BaseFetchRecordsMethodTestCase(BaseTestCase):
         """should ignore None results"""
         class Test(pyperry.Base):
             id = Field()
-            def _config(cls):
-                cls.configure('read', adapter=TestAdapter)
+            reader = TestAdapter()
+
         TestAdapter.data = None
         TestAdapter.count = 3
         result = Test.fetch_records(Test.scoped())
@@ -505,14 +308,14 @@ class BaseComparisonTestCase(BaseTestCase):
         test = self.Test({ 'id': 1, 'name': 'foo' })
         self.assertEqual(test, test)
 
-    def test_attributes_equal(self):
-        """should compare two differnt objects with the same attributes as equal"""
+    def test_fields_equal(self):
+        """should compare two different objects with the same fields as equal"""
         test1 = self.Test({ 'id': 2, 'name': 'Poop Head' })
         test2 = self.Test({ 'id': 2, 'name': 'Poop Head' })
         self.assertEqual(test1, test2)
 
     def test_not_equal(self):
-        """should not be equal when attributes are different"""
+        """should not be equal when fields are different"""
         test1 = self.Test({ 'id': 1, 'name': 'Poop Head' })
         test2 = self.Test({ 'id': 1, 'name': 'Poop Head!' })
         self.assertNotEqual(test1, test2)
@@ -535,10 +338,10 @@ class BaseInheritanceTestCase(BaseTestCase):
 
     def test_article_subclass_behavior(self):
         """subclass should behave like base class"""
-        print self.base_article.defined_attributes
-        print self.sub_article.defined_attributes
-        self.assertEqual(self.sub_article.first().attributes,
-                self.base_article.first().attributes)
+        print self.base_article.defined_fields
+        print self.sub_article.defined_fields
+        self.assertEqual(self.sub_article.first().fields,
+                self.base_article.first().fields)
 
 
 ##
@@ -550,8 +353,8 @@ class BaseScopingTestCase(BaseTestCase):
 
     def setUp(self):
         class Test(pyperry.Base):
-            attributes = ['id']
-        Test.configure('read', adapter=TestAdapter)
+            fields = ['id']
+            reader = TestAdapter()
 
         self.Test = Test
         TestAdapter.data = { 'id': 1 }
@@ -691,21 +494,13 @@ class BaseUnscopedMethodTestCase(BaseScopingTestCase):
 #
 class BasePersistenceTestCase(BaseTestCase):
     def setUp(self):
-        TestAdapter.reset()
+        TestAdapter.reset_calls()
         class Test(pyperry.Base):
             id = Field()
-        Test.configure('read', adapter=TestAdapter)
-        Test.configure('write', adapter=TestAdapter, foo='bar')
+            reader = TestAdapter()
+            writer = TestAdapter(foo='bar')
         self.Test = Test
         self.test = Test({ 'id': 1 })
-
-# Configuration
-class WriteAdapterConfigTestCase(BasePersistenceTestCase):
-
-    def test_configuration(self):
-        """should allow 'write' configuration"""
-        self.assertEqual(self.Test.adapter_config['write'],
-                { 'adapter': TestAdapter, 'foo': 'bar' })
 
 ##
 # save method
@@ -778,8 +573,8 @@ class BaseReloadMethodTestCase(BasePersistenceTestCase):
         before = { 'id': '1' }
         test = ReloadTestModel(copy.copy(before))
         test.reload()
-        self.assertNotEqual(test.attributes, before)
-        self.assertEqual(test.attributes, { 'id': 2, 'a': 3, 'b': 4 })
+        self.assertNotEqual(test.fields, before)
+        self.assertEqual(test.fields, { 'id': 2, 'a': 3, 'b': 4 })
         self.assertEqual(test.a, 3)
 
     def test_fresh(self):
@@ -797,8 +592,8 @@ class BaseFreezeMethodsTestCase(BaseTestCase):
     def setUp(self):
         class Test(pyperry.Base):
             id = Field()
+            writer = TestAdapter()
 
-        Test.configure('write', adapter=TestAdapter)
         self.test_model = Test({'id':1}, False)
         self.model = pyperry.Base({})
 

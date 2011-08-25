@@ -47,12 +47,6 @@ class BaseMeta(type):
         # Create the new class
         new = type.__new__(mcs, name, bases, dict_)
 
-        # Deepcopy adapter configs from ancestor or create a base configset
-        if hasattr(new, 'adapter_config'):
-            new.adapter_config = deepcopy(new.adapter_config)
-        else:
-            new.adapter_config = {}
-
         # Create a default primary_key value
         if not hasattr(new, '_primary_key'):
             new._primary_key = 'id'
@@ -60,11 +54,11 @@ class BaseMeta(type):
         # Create fresh adapter dict
         new._adapters = {}
 
-        # Define any attributes set during class definition
-        if not hasattr(new, 'defined_attributes'):
-            new.defined_attributes = set()
+        # Define any fields set during class definition
+        if not hasattr(new, 'defined_fields'):
+            new.defined_fields = set()
         else:
-            new.defined_attributes = deepcopy(new.defined_attributes)
+            new.defined_fields = deepcopy(new.defined_fields)
 
         # Define any associations set during class definition
         if not hasattr(new, 'defined_associations'):
@@ -125,7 +119,7 @@ class BaseMeta(type):
         """
         if isinstance(value, Field):
             value.name = key
-            cls._define_attributes(key)
+            cls._define_fields(key)
         elif isinstance(value, Association):
             value.id = key
             value.target_klass = cls
@@ -139,9 +133,6 @@ class BaseMeta(type):
             value.__name__ = key
             if not hasattr(cls, 'scopes'): cls.scopes = {}
             cls.scopes[key] = value
-        elif key == '__config' or key == '_%s__config' % cls.__name__:
-            for mode in AbstractAdapter.adapter_types:
-                cls.configure(mode, value.get(mode) or {})
 
         type.__setattr__(cls, key, value)
 
@@ -206,9 +197,9 @@ class BaseMeta(type):
         doc_parts = []
         if cls._docstring:
             doc_parts.append(cls._docstring)
-        doc_parts.append('\nData attributes:')
+        doc_parts.append('\nData fields:')
         doc_parts += ['    %s' % attr
-                      for attr in sorted(cls.defined_attributes)]
+                      for attr in sorted(cls.defined_fields)]
         doc_parts.append('\nAssociations:')
         doc_parts += sorted([cls.describe_association(assoc_name)
                              for assoc_name in cls.defined_associations])
@@ -233,10 +224,6 @@ class BaseMeta(type):
         if extra:
             description += ' (%s)' % extra
         return description
-
-    @property
-    def reader(cls):
-        return cls.adapter('read')
 
 
 class Base(object):
@@ -393,21 +380,21 @@ class Base(object):
 
     __metaclass__ = BaseMeta
 
-    def __init__(self, attributes={}, new_record=True, **kwargs):
+    def __init__(self, fields={}, new_record=True, **kwargs):
         """
-        Initialize a new pyperry object with attributes
+        Initialize a new pyperry object with specified fields
 
-        Uses C{attributes} dictionary to set attributes on a new instance.
+        Uses C{fields} dictionary to set fields on a new instance.
         Only keys that have been defined for the model will be set.  Defaults
         to a new record but can be overriden with C{new_record} param. You can
-        also use C{kwargs} to specify the attributes.
+        also use C{kwargs} to specify the fields.
 
-        @param attributes: dictionary of attributes to set on the new instance
+        @param fields: dictionary of fields to set on the new instance
         @param new_record: set new_record flag to C{True} or C{False}.
 
         """
-        self.attributes = {}
-        self.set_attributes(attributes)
+        self.fields = {}
+        self.set_attributes(fields)
         self.set_attributes(kwargs)
         self.new_record = new_record
         self.saved = None
@@ -424,7 +411,7 @@ class Base(object):
             person['id']
             person['name']
 
-        Developer Note:  This method of accessing attributes is used internally
+        Developer Note:  This method of accessing fields is used internally
         and should never be overridden by subclasses.
 
         @raise KeyError: If C{key} is not a defined attribute.
@@ -432,9 +419,9 @@ class Base(object):
         @param key: name of the attribute to get
 
         """
-        if key in self.defined_attributes:
+        if key in self.defined_fields:
             # Using get() here to avoid KeyError on uninitialized attrs
-            return self.attributes.get(key)
+            return self.fields.get(key)
         else:
             raise KeyError("Undefined attribute '%s'" % key)
 
@@ -453,21 +440,21 @@ class Base(object):
         @param value: value to set C{key} attribute to
 
         """
-        if key in self.defined_attributes:
-            self.attributes[key] = value
+        if key in self.defined_fields:
+            self.fields[key] = value
         else:
             raise KeyError("Undefined attribute '%s'" % key)
 
     def __dir__(self):
         """
-        Adds dynamically defined attributes and scopes to the results for dir()
+        Adds dynamically defined fields and scopes to the results for dir()
 
         """
         excluded_attrs = self.__class__._relation_delegates
         return list(set( # removes duplicate entries
             [x for x in dir(self.__class__) if x not in excluded_attrs] +
             self.__dict__.keys() +
-            list(self.defined_attributes) +
+            list(self.defined_fields) +
             self.defined_associations.keys()
         ))
 
@@ -487,26 +474,27 @@ class Base(object):
     #}
 
     #{ Persistence
-    def set_attributes(self, attributes):
+    # TODO: Should be set_fields
+    def set_attributes(self, fields):
         """
-        Set the attributes of the object using the provided dictionary.
+        Set the fields of the object using the provided dictionary.
 
-        Only attributes defined using define_attributes will be set.
+        Only fields listed in _defined_fields will be set.
 
-        @param attributes: dictionary of attributes
+        @param fields: dictionary of fields
 
         """
-        for field in attributes.keys():
-            if field in self.defined_attributes:
-                self[field] = attributes[field]
+        for field in fields.keys():
+            if field in self.defined_fields:
+                self[field] = fields[field]
 
     def save(self):
         """
-        Save the current value of the model's data attributes through the write
+        Save the current value of the model's data fields through the write
         adapter.
 
         If the save succeeds, the model's C{saved} attribute will be set to
-        True. Also, if a read adapter is configured, the models data attributes
+        True. Also, if a read adapter is configured, the models data fields
         will be refreshed to ensure that you have the current values.
 
         If the save fails, the model's C{errors} will be set to a
@@ -529,27 +517,28 @@ class Base(object):
         self.last_writer_response = self.writer(model=self, mode='write')
         return self.last_writer_response.success
 
-    def update_attributes(self, attributes=None, **kwargs):
+    # TODO: Should be update_fields
+    def update_attributes(self, fields=None, **kwargs):
         """
-        Update the attributes with the given dictionary or keywords and save
+        Update the fields with the given dictionary or keywords and save
         the model.
 
         Has the same effect as calling::
-            obj.set_attributes(attributes)
+            obj.set_fields(fields)
             obj.save()
 
-        Requires either C{attributes} or keyword arguments.  If both are
-        provicded, C{attributes} will be used and C{kwargs} will be ignored.
+        Requires either C{fields} or keyword arguments.  If both are
+        provicded, C{fields} will be used and C{kwargs} will be ignored.
 
-        @param attributes: dictionary of attributes to set
-        @param kwargs: Optionally use keyword syntax instead of C{attributes}
+        @param fields: dictionary of fields to set
+        @param kwargs: Optionally use keyword syntax instead of C{fields}
         @return: Returns C{True} on success or C{False} on failure
 
         """
-        if not attributes:
-            attributes = kwargs
+        if not fields:
+            fields = kwargs
 
-        self.set_attributes(attributes)
+        self.set_attributes(fields)
 
         return self.save()
 
@@ -587,10 +576,10 @@ class Base(object):
     #}
 
     def reload(self):
-        """Refetch the attributes for this object from the read adapter"""
+        """Refetch the fields for this object from the read adapter"""
         pk_condition = {self.pk_attr(): self.pk_value()}
         relation = self.scoped().where(pk_condition).fresh()
-        self.attributes = relation.first().attributes
+        self.fields = relation.first().fields
 
     def frozen(self):
         """Returns True if this instance is frozen and cannot be saved."""
@@ -605,116 +594,6 @@ class Base(object):
 
     #{ Configuration
     @classmethod
-    def configure(cls, adapter_type, config=None, **kwargs):
-        """
-        Method for setting adapter configuration options.
-
-        Accepts a dictionary argument or keyword arguments, but not both.
-        Configuration specified will be merged with all previous calls to
-        C{configure} for this C{adapter_type}
-
-        @param adapter_type: specify the type of adapter ('read' or 'write')
-        @param config: dictionary of configuration parameters
-        @param kwargs: alternate specification of configuration
-
-        """
-        if adapter_type not in AbstractAdapter.adapter_types:
-            raise errors.ConfigurationError(
-                    "Unrecognized adapter type: %s" % adapter_type)
-
-        new_dict = config or kwargs
-
-        if not cls.adapter_config.has_key(adapter_type):
-            cls.adapter_config[adapter_type] = {}
-
-        cls.adapter_config[adapter_type].update(new_dict)
-
-    @classmethod
-    def add_middleware(cls, adapter_type, klass, options=None, **kwargs):
-        """
-        Add a middleware to the given adapter
-
-        Interface for appending a middleware to an adapter stack.  For more
-        information on middlewares see docs on
-        L{pyperry.adapter.abstract_adapter.AbstractAdapter}.
-
-        @param adapter_type: specify type of adapter ('read' or 'write')
-        @param klass: specify the class to use as the middleware
-        @param options: specify an options dictionary to pass to middleware
-        @param kwargs: specify options with keyword arguments instead of
-        options.
-
-        """
-        if cls.adapter_config.has_key(adapter_type):
-            middlewares = cls.adapter_config[adapter_type].get('_middlewares')
-        if not 'middlewares' in locals() or not middlewares:
-            middlewares = []
-
-        middlewares.append( (klass, options or kwargs or {}) )
-
-        cls.configure(adapter_type, _middlewares=middlewares)
-
-    @classmethod
-    def add_processor(cls, adapter_type, klass, options=None, **kwargs):
-        """
-        Add a processor to the given adapter
-
-        Interface for adding a processor to the adapter stack. Processors come
-        before the middleware in the adapter stack. For more information on
-        processors see docs on
-        L{pyperry.adapter.abstract_adapter.AbstractAdapter}.
-
-        @param adapter_type: specify type of adapter ('read' or 'write')
-        @param klass: specify the class to use as the processor
-        @param options: specify an options dictionary to pass to processor
-        @param kwargs: specify options with keyword arguments instead of
-        options.
-
-        """
-        processors = []
-        if cls.adapter_config.has_key(adapter_type):
-            processors = (cls.adapter_config[adapter_type].get('_processors')
-                          or [])
-
-        processor_config = (klass, options or kwargs or {})
-        processors.append(processor_config)
-
-        cls.configure(adapter_type, _processors=processors)
-
-    @classmethod
-    def adapter(cls, adapter_type):
-        """
-        Returns the adapter specified by C{adapter_type}
-
-        If the adapter has not been configured correctly C{ConfigurationError}
-        will be raised.
-
-        @param adapter_type: type of adapter ('read' or 'write')
-        @return: the adapter specified by C{adapter_type}
-
-        """
-        if cls._adapters.has_key(adapter_type):
-            return cls._adapters[adapter_type]
-
-        if not cls.adapter_config.has_key(adapter_type):
-            raise errors.ConfigurationError("You must configure the %s adapter"
-                    % (adapter_type) )
-
-        adapter_klass = cls.adapter_config[adapter_type].get('adapter')
-        if not adapter_klass:
-            raise errors.ConfigurationError("You must specify the 'adapter' "
-                    "option in the %s configuration" % adapter_type)
-
-        cls._adapters[adapter_type] = adapter_klass(
-                cls.adapter_config[adapter_type])
-
-        return cls._adapters[adapter_type]
-
-    @property
-    def writer(self):
-        return self.__class__.adapter('write')
-
-    @classmethod
     def primary_key(cls):
         """
         Returns the attribute name of the model's primary key.
@@ -725,10 +604,10 @@ class Base(object):
     def set_primary_key(cls, attr_name):
         """
         Set the name of the primary key attribute for the model. The new
-        primary key attribute must be one of the definted attributes otherwise
+        primary key attribute must be one of the defined fields otherwise
         set_primary_key will raise an AttributeError.
         """
-        if attr_name not in cls.defined_attributes:
+        if attr_name not in cls.defined_fields:
             raise AttributeError(
                     'an attribute must be defined to make it the primary key')
         cls._primary_key = attr_name
@@ -795,10 +674,10 @@ class Base(object):
         @return: Cloned return value from C{current_scope} or C{relation}
 
         """
-        if cls.current_scope():
-            return cls.relation().merge(cls.current_scope())
-        else:
+        if cls.current_scope() is None:
             return cls.relation().clone()
+        else:
+            return cls.relation().merge(cls.current_scope())
 
     @classmethod
     def unscoped(cls, function):
@@ -823,35 +702,35 @@ class Base(object):
     #}
 
     @classmethod
-    def _define_attributes(cls, *attributes):
+    def _define_fields(cls, *fields):
         """
-        Set specified attribute to the defined_attributes `set`
+        Set specified attribute to the defined_fields `set`
 
-        This method is automatically called when attributes are set of type
-        Field on the class.  Each call will union any new attributes into
-        the set of defined attributes.
+        This method is automatically called when fields are set of type
+        Field on the class.  Each call will union any new fields into
+        the set of defined fields.
 
         This is only a tracking method and should not be called outside of this
         class.
 
-        @param attributes: list parameters as strings, or the first argument is
+        @param fields: list parameters as strings, or the first argument is
         a list of strings.
 
         """
-        if attributes[0].__class__ in [list, set, tuple]:
-            attributes = attributes[0]
-        cls.defined_attributes |= set(attributes)
+        if fields[0].__class__ in [list, set, tuple]:
+            fields = fields[0]
+        cls.defined_fields |= set(fields)
 
     def __repr__(self):
         """Return a string representation of the object"""
         return "<%s object %s new_record=%s>" % (
                 self.__class__.__name__,
-                self.attributes,
+                self.fields,
                 self.new_record)
 
     def __eq__(self, compare):
-        """Compare equality of an object by its attributes"""
-        return( self.attributes == compare.attributes
+        """Compare equality of an object by its fields"""
+        return( self.fields == compare.fields
                 and type(self) == type(compare) )
 
 

@@ -32,15 +32,13 @@ class LocalCacheInstalledTestCase(LocalCacheBaseTestCase):
         self.cache = pyperry.middlewares.local_cache.cache_store
         class Test(pyperry.Base):
             id = Field()
+            reader = TestAdapter(middlewares=[(LocalCache, {})])
 
-            def _config(cls):
-                cls.configure('read', adapter=TestAdapter)
-                cls.add_middleware('read', LocalCache)
         self.Test = Test
 
     def tearDown(self):
         self.cache.empty()
-        TestAdapter.reset()
+        TestAdapter.reset_calls()
 
     def test_empty_cache(self):
         """should return adapter result when cache is empty"""
@@ -52,7 +50,7 @@ class LocalCacheInstalledTestCase(LocalCacheBaseTestCase):
         self.assertEqual(len(self.cache.store.keys()), 0)
         record = self.Test.first()
         self.assertEqual(len(self.cache.store.keys()), 1)
-        self.assertEqual(self.cache.store.values()[0][0], [record.attributes])
+        self.assertEqual(self.cache.store.values()[0][0], [record.fields])
 
     def test_recalls_result_from_cache(self):
         """should recall stored value from cache"""
@@ -60,18 +58,18 @@ class LocalCacheInstalledTestCase(LocalCacheBaseTestCase):
         TestAdapter.data = { 'id': 2 }
         record2 = self.Test.first()
 
-        self.assertEqual(record1.attributes, record2.attributes)
+        self.assertEqual(record1.fields, record2.fields)
 
     def test_unique_results(self):
         """should only return from cache of same query"""
         record1 = self.Test.first()
         TestAdapter.data = { 'id': 2 }
         record2 = self.Test.where('foo').first()
-        self.assertNotEqual(record1.attributes, record2.attributes)
+        self.assertNotEqual(record1.fields, record2.fields)
 
     def test_interval_option(self):
         """should use interval option for longevity of new entries"""
-        self.Test.adapter('read').middlewares = [
+        self.Test.reader.middlewares = [
                 (LocalCache, { 'interval': 0 })]
         self.Test.first()
         self.Test.first()
@@ -79,7 +77,7 @@ class LocalCacheInstalledTestCase(LocalCacheBaseTestCase):
 
     def test_max_entry_size_option(self):
         """should only allow max_entry_size entries if set"""
-        self.Test.adapter('read').middlewares = [
+        self.Test.reader.middlewares = [
                 (LocalCache, { 'max_entry_size': 2 })]
         TestAdapter.count = 3
         self.Test.first()

@@ -10,8 +10,7 @@ class Source(pyperry.Base):
     id = Field()
 
 class AssocTest(pyperry.Base):
-    def _config(c):
-        c.configure('read', adapter=TestAdapter)
+    reader = TestAdapter()
 
 class Site(AssocTest):
     id = Field()

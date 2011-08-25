@@ -70,7 +70,7 @@ class ModelBridgeReadTestCase(ModelBridgeBaseTestCase):
         self.adapter.return_value = [None, {'id': 1}, None]
         result = self.bridge(**self.stack_opts)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].attributes, {'id': 1})
+        self.assertEqual(result[0].fields, {'id': 1})
 
     def test_new_record_false(self):
         """returned records should have their new_record attr set to false"""
@@ -80,23 +80,21 @@ class ModelBridgeReadTestCase(ModelBridgeBaseTestCase):
 
 class BridgeTest(Test):
     id = Field()
-
-    def _config(cls):
-        cls.configure('read', adapter=TestAdapter)
+    reader = TestAdapter()
 
 
 class ModelBridgeWriteTestCase(ModelBridgeBaseTestCase):
 
     def setUp(self):
         self.model_class = BridgeTest
-        self.model_class.configure('read', adapter=TestAdapter)
+        self.model_class.reader = TestAdapter()
         self.model = self.model_class({})
-        self.model.adapter('read').data = { 'id': 42 }
+        self.model.reader.data = { 'id': 42 }
         self.options = { 'model': self.model, 'mode': 'write' }
 
     def tearDown(self):
         try:
-            self.model.adapter('read').reset()
+            self.model.reader.reset_calls()
         except:
             pass
 
@@ -140,8 +138,7 @@ class WriteExistingRecordsTestCase(ModelBridgeWriteTestCase):
 
     def test_skip_reload(self):
         """should not reload the model if no read adapter is available"""
-        del self.model_class.adapter_config['read']
-        del self.model_class._adapters['read']
+        del self.model_class.reader
         ModelBridge(SuccessAdapter())(**self.options)
         self.assertEqual(len(TestAdapter.calls), 0)
 
@@ -178,8 +175,7 @@ class WriteNewRecordsTestCase(ModelBridgeWriteTestCase):
 
     def test_no_exception_without_read(self):
         """should not throw an exception if no read adapter is configured"""
-        del self.model_class.adapter_config['read']
-        del self.model_class._adapters['read']
+        del self.model_class.reader
         adapter = SuccessAdapter()
         adapter.response.parsed = None
         ModelBridge(adapter)(**self.options)

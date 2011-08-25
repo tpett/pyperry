@@ -58,7 +58,7 @@ class DirMethodTestCase(unittest.TestCase):
     def test_instance_dir(self):
         """
         should include the attributes included by default when calling dir() on
-        an instance of pyperry.Base in addition to the defined_attributes and
+        an instance of pyperry.Base in addition to the defined_fields and
         defined_associations for the pyperry model.
 
         """
@@ -78,7 +78,7 @@ class DirMethodTestCase(unittest.TestCase):
             self.assertTrue(x in attrs,
                     "expected '%s' to be in '%s'" % (x, attrs))
 
-        for x in list(model.defined_attributes):
+        for x in list(model.defined_fields):
             self.assertTrue(x in attrs,
                     "expected '%s' to be in '%s'" % (x, attrs))
 
@@ -128,8 +128,8 @@ class HelpMethodTestCase(unittest.TestCase):
 
     def test_attributes_included(self):
         """should include a model's attributes in __doc__"""
-        self.assertContains(HelpModel.__doc__, '\nData attributes:')
-        for attr in HelpModel.defined_attributes:
+        self.assertContains(HelpModel.__doc__, '\nData fields:')
+        for attr in HelpModel.defined_fields:
             self.assertContains(HelpModel.__doc__, '    ' + attr)
 
     def test_associations_included(self):
@@ -154,7 +154,7 @@ class HelpMethodTestCase(unittest.TestCase):
         self.assertEqual(HelpModel.__doc__,
 """a model with a docstring
 
-Data attributes:
+Data fields:
     attr1
     attr2
 

@@ -16,14 +16,13 @@ def setup_module():
 class TestModel(pyperry.Base):
     id = Field()
     foo = Field()
-    def _config(c):
-        adapter_conf = {
-            'adapter': RestfulHttpAdapter,
-            'service': 'test_models',
-            'host': 'localhost:8888'
-        }
-        c.configure('read', **adapter_conf)
-        c.configure('write', **adapter_conf)
+
+    adapter_conf = {
+        'service': 'test_models',
+        'host': 'localhost:8888'
+    }
+    reader = RestfulHttpAdapter(adapter_conf)
+    writer = RestfulHttpAdapter(adapter_conf)
 
 class RestfulIntegrationTestCase(unittest.TestCase):
 
@@ -33,12 +32,6 @@ class RestfulIntegrationTestCase(unittest.TestCase):
 
     def tearDown(self):
         http_server.clear_responses()
-
-    def test_middleware(self):
-        """should include the ModelBridge in the adapter middlewares"""
-        middlewares = TestModel.adapter('write').middlewares
-        self.assertEqual(len(middlewares), 1)
-        self.assertEqual(middlewares[0][0], ModelBridge)
 
     def test_query(self):
         records = [

@@ -67,11 +67,8 @@ class ModelBridge(object):
         the data attributes if a read adapter is configured.
 
         """
-        has_read_adapter = True
-        try:
-            model.adapter('read')
-        except ConfigurationError:
-            has_read_adapter = False
+        has_read_adapter = (hasattr(model, 'reader') and
+                model.reader is not None)
 
         if model.new_record and has_read_adapter:
             setattr(model, model.pk_attr(),

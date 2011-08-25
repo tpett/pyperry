@@ -90,30 +90,30 @@ class AbstractAdapter(object):
 
     adapter_types = ['read', 'write']
 
-    def __init__(self, config={}, **kwargs): #middlewares=None, processors=[]):
+    def __init__(self, config=None, **kwargs):
         """
         Create a new adapter object with the given configuration.
         """
+        if config is None:
+            config = {}
+
         if isinstance(config, AbstractAdapter):
             self.middlewares = config.middlewares
             self.processors = config.processors
-            config = config.config
+            config = copy(config.config)
         else:
-            self.middlewares = kwargs.get('middlewares') or [(ModelBridge, {})]
-            self.processors = kwargs.get('processors') or []
             config.update(kwargs)
+            self.middlewares = config.get('middlewares') or []
+            self.processors = config.get('processors') or []
+
+        self.middlewares = copy(self.middlewares)
+        self.processors = copy(self.processors)
 
         self.config = DelayedConfig(config)
         self._stack = None
 
         if 'timeout' in self.config.keys():
             socket.setdefaulttimeout(self.config['timeout'])
-
-        # Add in configured middlewares
-        if '_middlewares' in self.config.keys():
-            self.middlewares = self.middlewares + self.config['_middlewares']
-        if '_processors' in self.config.keys():
-            self.processors = self.processors + self.config['_processors']
 
     @property
     def stack(self):
@@ -130,10 +130,18 @@ class AbstractAdapter(object):
         if self._stack: return self._stack
 
         self._stack = self.execute
-        stack_items = copy(self.processors) + copy(self.middlewares)
+        stack_items = (copy(self.processors) +
+                [(ModelBridge, {})] +
+                copy(self.middlewares))
         stack_items.reverse()
 
-        for (klass, config) in stack_items:
+        for item in stack_items:
+            if not isinstance(item, (list, tuple)):
+                item = tuple([item, {}])
+
+            klass = item[0]
+            config = item[1]
+
             self._stack = klass(self._stack, config)
 
         return self._stack
@@ -141,6 +149,12 @@ class AbstractAdapter(object):
     def reset(self):
         """Clear out the stack causing it to be rebuilt on the next request"""
         self._stack = None
+
+    def clear(self):
+        """Removes all configured middleware and processors and call `reset`"""
+        self.middlewares = []
+        self.processors = []
+        self.reset()
 
     def __call__(self, **kwargs):
         """Makes a request to the stack"""
@@ -171,7 +185,10 @@ class AbstractAdapter(object):
         """Delete the object from the datastore"""
         raise NotImplementedError("You must define this method in subclasses")
 
-    def merge(self, source={}, **kwargs):
+    def merge(self, source=None, **kwargs):
+        if source is None:
+            source = {}
+
         new = self.__class__(self)
 
         if isinstance(source, AbstractAdapter):

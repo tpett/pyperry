@@ -133,19 +133,19 @@ class ParamsForMethodTestCase(HttpAdapterTestCase):
     def test_model_attributes(self):
         """should use model's attributes"""
         params = self.adapter.params_for(self.model)
-        self.assertEqual(params, self.model.attributes)
+        self.assertEqual(params, self.model.fields)
 
     def test_with_wrapper(self):
         """should wrap the model's attributes with the given string"""
         self.config['params_wrapper'] = 'widget'
         adapter = RestfulHttpAdapter(self.config)
         params = adapter.params_for(self.model)
-        self.assertEqual(params, {'widget': self.model.attributes})
+        self.assertEqual(params, {'widget': self.model.fields})
 
     def test_with_default_params(self):
         """should include the default_options with the attribuets"""
         self.config['default_params'] = {'foo': 'bar'}
-        expected = copy(self.model.attributes)
+        expected = copy(self.model.fields)
         expected.update({'foo':'bar'})
 
         adapter = RestfulHttpAdapter(self.config)
@@ -158,7 +158,7 @@ class ParamsForMethodTestCase(HttpAdapterTestCase):
         self.config['default_params'] = {'foo': 'bar', 'widget': 5}
         self.config['params_wrapper'] = 'widget'
         expected = copy(self.config['default_params'])
-        expected.update(copy({'widget':self.model.attributes}))
+        expected.update(copy({'widget':self.model.fields}))
 
         adapter = RestfulHttpAdapter(self.config)
         params = adapter.params_for(self.model)

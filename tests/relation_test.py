@@ -30,16 +30,15 @@ class BaseRelationTestCase(unittest.TestCase):
         class Test(pyperry.Base):
             id = Field()
             foo = Scope(where='bar')
+            reader = TestAdapter()
 
-            def _config(c):
-                c.configure('read', adapter=TestAdapter)
         self.Test = Test
         self.relation = Relation(Test)
         TestAdapter.data = { 'id': 1 }
         TestAdapter.count = 3
 
     def tearDown(self):
-        TestAdapter.reset()
+        TestAdapter.reset_calls()
 
     @property
     def last_call(self):
@@ -604,7 +603,6 @@ class RelationAllMethodTestCase(BaseRelationTestCase):
 
 class RelationFirstMethodTestCase(BaseRelationTestCase):
     """Relation class first method"""
-    pass
 
     def test_arguments_optional(self):
         """Should optionally take parameters and return record"""

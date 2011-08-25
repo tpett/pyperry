@@ -10,9 +10,6 @@ class TestAdapter(AbstractAdapter):
     count = 1
     return_val = True
 
-    def __init__(self, *args, **kwargs):
-        AbstractAdapter.__init__(self, *args, **kwargs)
-
     def read(self, **kwargs):
         self.calls.append(kwargs['relation'].query())
         if self.data is not None and not hasattr(self.data, 'keys'):
@@ -27,7 +24,7 @@ class TestAdapter(AbstractAdapter):
 
 
     @classmethod
-    def reset(cls):
+    def reset_calls(cls):
         """Reset the adapter"""
         cls.calls = []
         cls.data = {}

@@ -157,9 +157,9 @@ class RestfulHttpAdapter(AbstractAdapter):
             params.update(self.config['default_params'])
 
         if 'params_wrapper' in self.config.keys():
-            params.update({self.config['params_wrapper']: model.attributes})
+            params.update({self.config['params_wrapper']: model.fields})
         else:
-            params.update(model.attributes)
+            params.update(model.fields)
 
         return params
 
