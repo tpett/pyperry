@@ -234,6 +234,14 @@ class BelongsTo(Association):
 
     """
 
+    def __set__(self, instance, value):
+        super(BelongsTo, self).__set__(instance, value)
+
+        setattr(instance, self.get_foreign_key(), value.pk_value())
+
+        if self.polymorphic:
+            setattr(instance, self.polymorphic_type(), value.__class__.__name__)
+
     def type(self):
         return 'belongs_to'
 

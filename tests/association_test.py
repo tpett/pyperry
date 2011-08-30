@@ -224,6 +224,14 @@ class BelongsToTestCase(BaseAssociationTestCase):
         self.assertEqual(Test.foo, assoc)
         self.assertEqual(type(instance.foo), Test)
 
+    def test_set_descriptor(self):
+        """should set the foreign_key field with value of record if set"""
+        article = self.article(id=1)
+        comment = self.comment()
+        comment.parent = article
+        self.assertEqual(comment.parent_id, 1)
+        self.assertEqual(comment.parent_type, 'Article')
+
 class HasTestCase(BaseAssociationTestCase):
 
     def setUp(self):
