@@ -25,30 +25,26 @@ This is an example of a Person model::
         name = Field()
         favorite_color = Field()
 
-        def config(cls):
-            # Basic adapter configuration
-            cls.configure('read', type='bertrpc', procedure='person')
-            cls.add_middleware('read', MyMiddleware, config='val')
+        # Configure Adapter
+        reader = BERTRPC(procedure='person')
 
-            # Associations
-            cls.has_one('address', class_name='Address')
+        # Setup Associations
+        address = HasOne(class_name="Address")
 
-            # Example of defining scopes
-            cls.scope('ordered', cls.order('order_by'))
-            @cls.scope
-            def name_like(word):
-                return cls.where('asset.`name` LIKE '"%%s%"' % word))
+        ordered = Scope(order="order_by")
 
-        # ...
+        @Scope
+        def name_like(cls, word):
+            return cls.where(name=re.compile(word, re.I))
 
 Some example usage:
 
-    >>> bob = Person({ 'name': 'Bob' })
+    >>> bob = Person(name="Bob")
     >>> bob.name
     'Bob'
     >>> bob.save()
     True
-    >>> perry = Person.where({ 'name': 'Perry' }).first()
+    >>> perry = Person.where(name='Perry').first()
     >>> perry.name
     'Perry'
     >>> perry.address()

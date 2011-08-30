@@ -6,7 +6,7 @@ import traceback
 from pyperry import errors
 from pyperry.relation import Relation
 from pyperry.adapter.abstract_adapter import AbstractAdapter
-from pyperry.association import BelongsTo, HasMany, HasOne, HasManyThrough
+from pyperry.association import BelongsTo, HasMany, HasOne
 from pyperry.association import Association
 from pyperry.field import Field
 from pyperry.scope import Scope, DefaultScope
@@ -228,14 +228,16 @@ class Base(object):
     this::
 
         class Animal(pyperry.base.Base):
-            def config(cls):
-                cls.attributes 'id', 'name', 'mammal'
-                cls.configure('read', type='bertrpc')
-                cls.add_middleware('read', MyMiddleware, config1='val')
+            id = Field()
+            name = Field(type=str)
+            mammal = Field()
 
-                cls.has_many('friendships', class_name='Friendship')
+            reader = MyAdapter()
 
-                cls.scope('mammal', where={ 'mammal': true })
+            friendships = HasMany(class_name="Friendship")
+            friends = HasMany(class_name="Friend", through='friendships')
+
+            mammal = Scope(where= { 'mammal': True })
 
     Any class configuration can be done in this method.
 
@@ -245,7 +247,7 @@ class Base(object):
     Queries can be built by chaining calls to scopes or query methods.  For
     example::
 
-        Person.where({ 'first_name': 'Bob' }).order('last_name')
+        Person.where(first_name='Bob').order('last_name')
 
     This generates a query for all Person objects with the first name "Bob"
     ordered by their last name.  Each query method returns a new L{Relation}
@@ -256,7 +258,7 @@ class Base(object):
     C{list}.  The query will be run the first time the object is treated like a
     list, and the records will be used for the expression.  For example::
 
-        query = Animal.where({ 'type': 'Platypus' })
+        query = Animal.where(type='Platypus')
 
         # Array comprehensions and for loops
         for animal in query:
@@ -297,32 +299,19 @@ class Base(object):
 
     Scopes allow you to specify prebuilt views of your data.  Scopes, like
     query methods, can be applied simply by chaining calls on instances of
-    L{Relation} or the L{Base} class.  Scopes are created through the
-    L{scope()} class method (conventionally within the _config method)::
+    L{Relation} or the L{Base} class.  Scopes are created by setting a class
+    level attribute of type L{Scope}.  Here are some examples::
 
-        cls.scope('ordered', order='type, name')
-        cls.scope('platypus', where={ 'type': 'platypus' })
-        cls.scope('perrys', where={ 'name': 'perry' })
-        cls.scope('agentp', cls.perrys().platypus())
+        ordered = Scope(order=['type', 'name'])
+        platypus = Scope({ 'where': { 'type': 'platypus' } })
+        perrys = Scope(lambda(cls): cls.where(name='perry'))
+
+        @Scope
+        def type_is(cls, name):
+            return cls.where(type=name)
 
     These scopes can now be used in queries along with query methods and
     chained together to make powerful queries::
-
-        # Ordered animals with type 'platypus' named 'perry'
-        Animal.ordered().agentp()
-
-    Scopes can also accept arguments by defining a lambda or function to be
-    called when the scope is invoked::
-
-        @cls.scope
-        def name_is(rel, name):
-            return rel.where({ 'name': name })
-
-        # This can also be written:
-        cls.scope('name_is', lambda(rel, name): rel.where({ 'name': name }))
-
-        # This allows:
-        Animal.name_is('perry')
 
 
     Associations
@@ -333,7 +322,7 @@ class Base(object):
     source (model from which the data will come).  There are two basic kinds of
     associations:  has and belongs.  A has relationship means the foreign_key
     lives on the source model.  A belongs relationship means the foreign_key
-    lives on target model.
+    lives on the target model.
 
     Imagine a blog.  A blog has many articles and an article belongs to an
     author.  You might model this structure with Blog, Article and Person
@@ -341,9 +330,18 @@ class Base(object):
     for each class, but to save space we'll just show the association
     definition for each class::
 
-        Blog.has_many('articles', class_name='Article')
-        Article.belongs_to('blog', class_name='Blog')
-        Article.belongs_to('author', class_name='Person')
+        class Blog(pyperry.base.Base):
+            id = Field()
+
+            articles = HasMany(class_name='Article')
+
+        class Article(pyperry.base.Base):
+            id = Field()
+            blog_id = Field()
+            author_id = Field()
+
+            blog = BelongsTo(class_name='Blog', foreign_key='blog_id')
+            author = BelongsTo(class_name='Person', foreign_key='author_id')
 
     Assuming you have an instance of C{Blog} called C{blog} you could then
     reference these associations like this::
@@ -353,12 +351,12 @@ class Base(object):
         # The author of the first article
         articles[0].author()
 
-    Note that the L{has_many} association returns a L{Relation} object allowing
+    Note that the L{HasMany} association returns a L{Relation} object allowing
     you to apply query methods and scopes to the association before executing
     the query.
 
-    For more information on Associations see the individual L{association
-    methods<belongs_to>}.
+    For more information on Associations see the individual classes within the
+    %L{pyperry.association} module
 
     """
 
@@ -388,7 +386,7 @@ class Base(object):
     #{ Dict-like access
     def __getitem__(self, key):
         """
-        Adds C{dict} like attribute reading
+        Adds C{dict} like field reading
 
         Allows::
 
@@ -398,36 +396,36 @@ class Base(object):
         Developer Note:  This method of accessing fields is used internally
         and should never be overridden by subclasses.
 
-        @raise KeyError: If C{key} is not a defined attribute.
+        @raise KeyError: If C{key} is not a defined field.
 
-        @param key: name of the attribute to get
+        @param key: name of the field to get
 
         """
         if key in self.defined_fields:
             # Using get() here to avoid KeyError on uninitialized attrs
             return self.fields.get(key)
         else:
-            raise KeyError("Undefined attribute '%s'" % key)
+            raise KeyError("Undefined field '%s'" % key)
 
     def __setitem__(self, key, value):
         """
-        Adds C{dict} like attribute writing
+        Adds C{dict} like field writing
 
         Allows::
 
             animal['name'] = 'Perry'
             animal['type'] = 'Platypus'
 
-        @raise KeyError: If C{key} is not a defined attribute.
+        @raise KeyError: If C{key} is not a defined field.
 
-        @param key: name of the attribute to set
-        @param value: value to set C{key} attribute to
+        @param key: name of the field to set
+        @param value: value to set C{key} field to
 
         """
         if key in self.defined_fields:
             self.fields[key] = value
         else:
-            raise KeyError("Undefined attribute '%s'" % key)
+            raise KeyError("Undefined field '%s'" % key)
 
     def keys(self):
         """
@@ -438,15 +436,13 @@ class Base(object):
 
     def __dir__(self):
         """
-        Adds dynamically defined fields and scopes to the results for dir()
+        Ignores _relation_delegates.  Otherwise normal functions.
 
         """
         excluded_attrs = self.__class__._relation_delegates
         return list(set( # removes duplicate entries
             [x for x in dir(self.__class__) if x not in excluded_attrs] +
-            self.__dict__.keys() +
-            list(self.defined_fields) +
-            self.defined_associations.keys()
+            self.__dict__.keys()
         ))
 
     def pk_attr(self):

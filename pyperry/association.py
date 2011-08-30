@@ -324,18 +324,17 @@ class Has(Association):
         Builds conditions on top of the base_scope generated from any finder
         options set with the association::
 
-            has_many('widgets', klass=Widget, foreign_key='widget_id')
-            has_many('comments', as_='parent')
+            widgets = HasMany(klass=Widget, foreign_key='widget_id')
+            comments = HasMany(as_='parent')
 
         In addition to any finder options included with the association options
         the following will be added::
 
-            where('widget_id = %s ' % target['id'])
+            where(widget_id=target['id'])
 
         Or for the polymorphic :comments association::
 
-            where('parent_id = %s AND parent_type = %s' % (target['id'],
-            target.class))
+            where(parent_id=target['id'], parent_type=target.class)
 
         """
         pk_attr = self.primary_key()
@@ -432,7 +431,7 @@ class HasManyThrough(Has):
         class Internet(pyperry.Base):
             id = Field()
 
-            connected_devices = HasManyThrough(through'networks', source='devices')
+            connected_devices = HasMany(through'networks', source='devices')
             networks = HasMany(class_name='Network')
 
         class Network(pyperry.Base):
@@ -508,3 +507,4 @@ class HasManyThrough(Has):
                 relation = relation.where({ poly_type_attr: poly_type_name })
 
         return relation
+

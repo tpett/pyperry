@@ -1,10 +1,10 @@
 
 class Field(object):
     """
-    An attribute descriptor to handle managing and casting attributes on Base
+    An attribute descriptor to handle managing and casting fields on Base
 
-    Designed to return a casted attribute when called from an instance of Base,
-    or the instance of this attribute when called from the class.
+    Designed to return a casted field when called from an instance of Base,
+    or the instance of this Field class when called from the class.
 
     (see documentation on Python descriptors for more information)
 
