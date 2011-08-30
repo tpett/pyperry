@@ -1,6 +1,7 @@
 import pyperry
 from bertrpc import Service
 from pyperry.adapter.abstract_adapter import AbstractAdapter
+from pyperry.response import Response
 
 class BERTRPC(AbstractAdapter):
     """
@@ -16,16 +17,57 @@ class BERTRPC(AbstractAdapter):
 
     def read(self, **kwargs):
         options = kwargs['relation'].query()
-        options.update(self.config.base_options)
-        pyperry.logger.info('RPC.%s: %s' % (self.config.procedure, options))
+        options.update(self.config['base_options'])
+        options['mode'] = 'read'
+
+        pyperry.logger.info('RPC.%s: %s' % (self.config['procedure'], options))
+
+        return self._call_server(options)
+
+    def write(self, **kwargs):
+        model = kwargs['model']
+        options = self.config['base_options'].copy()
+        options['fields'] = model.fields.copy()
+
+        if model.new_record:
+            options['mode'] = 'create'
+        else:
+            options['mode'] = 'update'
+            options['where'] = [{ model.pk_attr(): model.pk_value() }]
+
+        return self._parse_response(self._call_server(options))
+
+    def delete(self, **kwargs):
+        model = kwargs['model']
+        options = self.config['base_options'].copy()
+        options['mode'] = 'delete'
+        options['where'] = [{ model.pk_attr(): model.pk_value() }]
+
+        return self._parse_response(self._call_server(options))
+
+
+    def _call_server(self, options):
         request = self.service.request('call')
-        module = request.__getattr__(self.config.namespace)
-        procedure = module.__getattr__(self.config.procedure)
+        module = getattr(request, self.config['namespace'])
+        procedure = getattr(module, self.config['procedure'])
         return procedure(options)
+
+    def _parse_response(self, raw):
+        response = Response()
+        response.raw = raw
+        response._parsed = raw
+
+        if raw.has_key('fields'):
+            response.success = True
+            response._model_attributes = raw['fields']
+        elif raw.has_key('success'):
+            response.success = raw['success']
+
+        return response
 
     @property
     def service(self):
         if not hasattr(self, '_service'):
-            self._service = Service(self.config.server, self.config.port)
+            self._service = Service(self.config['server'], self.config['port'])
         return self._service
 
