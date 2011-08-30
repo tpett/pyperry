@@ -1,6 +1,6 @@
 import pyperry
 from pyperry.field import Field
-from pyperry.association import BelongsTo, HasMany, HasManyThrough, HasOne
+from pyperry.association import BelongsTo, HasMany, HasOne
 from test_adapter import TestAdapter
 
 class Test(pyperry.Base):
@@ -37,7 +37,7 @@ class Site(AssocTest):
                 WHERE comments.text LIKE '%%awesome%%' AND
                     parent_type = "Site" AND parent_id = %s
             """ % s.id )
-    article_comments = HasManyThrough(through='articles', source='comments')
+    article_comments = HasMany(through='articles', source='comments')
 
 
 class Article(AssocTest):
@@ -52,7 +52,7 @@ class Article(AssocTest):
     comments = HasMany(as_='parent', class_name='Comment')
     awesome_comments = HasMany(as_='parent', class_name='Comment',
             conditions="text LIKE '%awesome%'")
-    comment_authors = HasManyThrough(through='comments', source='author')
+    comment_authors = HasMany(through='comments', source='author')
 
 class Comment(AssocTest):
     id = Field()
@@ -77,9 +77,9 @@ class Person(AssocTest):
     comments = HasMany(as_='parent', class_name='Comment')
     employees = HasMany(class_name='Person', foreign_key='manager_id')
     sites = HasMany(class_name='Site', foreign_key='maintainer_id')
-    commented_articles = HasManyThrough(through='comments', source='parent',
+    commented_articles = HasMany(through='comments', source='parent',
             source_type='Article')
-    maintained_articles = HasManyThrough(through='sites', source='articles')
+    maintained_articles = HasMany(through='sites', source='articles')
 
 class Company(AssocTest):
     id = Field()

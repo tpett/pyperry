@@ -356,13 +356,22 @@ class Has(Association):
                 })
             return scope
 
-class HasMany(Has):
+def HasMany(**kwargs):
     """
-    The C{HasMany} class simply declares that the L{Has} association is a
-    collection of type C{'has_many'}.
+    Wrapper constructor to detect through relationships and initialize the
+    correct class
+    """
+    if kwargs.get('through') is not None:
+        return HasManyThrough(**kwargs)
+    else:
+        return HasManyDirectly(**kwargs)
+
+class HasManyDirectly(Has):
+    """
+    The C{HasManyDirectly} class simply declares that the L{Has} association is
+    a collection of type C{'has_many'}.
 
     """
-
     def type(self):
         return 'has_many'
 
@@ -375,7 +384,6 @@ class HasOne(Has):
     not a collection and has a type of C{'has_one'}.
 
     """
-
     def type(self):
         return 'has_one'
 
@@ -440,7 +448,6 @@ class HasManyThrough(Has):
 
             network = BelongsTo(class_name='Network')
     """
-
     def type(self):
         return 'has_many_through'
 

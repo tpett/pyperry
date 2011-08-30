@@ -1,6 +1,6 @@
 import pyperry
 from pyperry.field import Field
-from pyperry.association import BelongsTo, HasOne, HasMany, HasManyThrough
+from pyperry.association import BelongsTo, HasOne, HasMany
 
 class DirModel(pyperry.Base):
     id = Field()
@@ -17,7 +17,7 @@ class HelpModel(pyperry.Base):
 
     foo = BelongsTo(polymorphic=True)
     ape = BelongsTo()
-    bars = HasManyThrough(through='bananas')
+    bars = HasMany(through='bananas')
     bananas = HasMany()
 
 class AssociationModel(pyperry.Base):
@@ -25,5 +25,5 @@ class AssociationModel(pyperry.Base):
     foo = BelongsTo(polymorphic=True)
     bar = HasOne()
     bizs = HasMany()
-    bazs = HasManyThrough(through='bizs')
+    bazs = HasMany(through='bizs')
 
