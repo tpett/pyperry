@@ -69,7 +69,7 @@ class RestfulIntegrationTestCase(unittest.TestCase):
         self.assertEqual(model.saved, False)
         self.assertEqual(model.errors['foo'], 'is not bar')
 
-    def test_update_attributes_with_keywords(self):
+    def test_update_fields_attributes_with_keywords(self):
         """
         should update a model with the attributes given as keyword args through
         the RestfulHttpAdapter
@@ -78,13 +78,13 @@ class RestfulIntegrationTestCase(unittest.TestCase):
         http_server.set_response(body=json.dumps(attrs))
         http_server.set_response(method='GET', body=json.dumps([attrs]))
         model = TestModel({}, False)
-        self.assertEqual(model.update_attributes(id=7, foo='bar'), True)
+        self.assertEqual(model.update_fields(id=7, foo='bar'), True)
         self.assertEqual(model.saved, True)
         self.assertEqual(model.new_record, False)
         self.assertEqual(model.id, 7)
         self.assertEqual(model.foo, 'bar')
 
-    def test_update_attributes_with_dict(self):
+    def test_update_fields_attributes_with_dict(self):
         """
         should update a model with given attribute dict through the
         RestfulHttpAdapter
@@ -93,19 +93,19 @@ class RestfulIntegrationTestCase(unittest.TestCase):
         http_server.set_response(body=json.dumps(attrs))
         http_server.set_response(method='GET', body=json.dumps([attrs]))
         model = TestModel({}, False)
-        self.assertEqual(model.update_attributes({'id':7, 'foo':'bar'}), True)
+        self.assertEqual(model.update_fields({'id':7, 'foo':'bar'}), True)
         self.assertEqual(model.saved, True)
         self.assertEqual(model.new_record, False)
         self.assertEqual(model.id, 7)
         self.assertEqual(model.foo, 'bar')
 
-    def test_update_attributes_failure(self):
+    def test_update_fields_attributes_failure(self):
         """should handle a failed update appropriately"""
         http_server.set_response(status=500, body=json.dumps({
             "errors":{"foo":"is not bar"}
         }))
         model = TestModel({}, False)
-        self.assertEqual(model.update_attributes({'id':7, 'foo':'boo'}), False)
+        self.assertEqual(model.update_fields({'id':7, 'foo':'boo'}), False)
         self.assertEqual(model.saved, False)
         self.assertEqual(model.errors['foo'], 'is not bar')
 

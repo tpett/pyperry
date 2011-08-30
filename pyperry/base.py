@@ -378,8 +378,8 @@ class Base(object):
 
         """
         self.fields = {}
-        self.set_attributes(fields)
-        self.set_attributes(kwargs)
+        self.set_fields(fields)
+        self.set_fields(kwargs)
         self.new_record = new_record
         self.saved = None
         self.errors = {}
@@ -452,21 +452,20 @@ class Base(object):
     def pk_attr(self):
         """
         A shortcut method from retrieving the name of this model's primary key
-        attribute.
+        field.
         """
         return self.primary_key()
 
     def pk_value(self):
         """
         A shortcut method for retrieving the value stored in this model's
-        primary key attribute.
+        primary key field.
         """
         return getattr(self, self.primary_key())
     #}
 
     #{ Persistence
-    # TODO: Should be set_fields
-    def set_attributes(self, fields):
+    def set_fields(self, fields=None, **kwargs):
         """
         Set the fields of the object using the provided dictionary.
 
@@ -475,6 +474,10 @@ class Base(object):
         @param fields: dictionary of fields
 
         """
+        if fields is None:
+            fields = {}
+        fields.update(kwargs)
+
         for field in fields.keys():
             if field in self.defined_fields:
                 self[field] = fields[field]
@@ -508,8 +511,7 @@ class Base(object):
         self.last_writer_response = self.writer(model=self, mode='write')
         return self.last_writer_response.success
 
-    # TODO: Should be update_fields
-    def update_attributes(self, fields=None, **kwargs):
+    def update_fields(self, fields=None, **kwargs):
         """
         Update the fields with the given dictionary or keywords and save
         the model.
@@ -526,10 +528,11 @@ class Base(object):
         @return: Returns C{True} on success or C{False} on failure
 
         """
-        if not fields:
-            fields = kwargs
+        if fields is None:
+            fields = {}
+        fields.update(kwargs)
 
-        self.set_attributes(fields)
+        self.set_fields(fields)
 
         return self.save()
 
@@ -587,15 +590,15 @@ class Base(object):
     @classmethod
     def primary_key(cls):
         """
-        Returns the attribute name of the model's primary key.
+        Returns the field name of the model's primary key.
         """
         return cls._primary_key
 
     @classmethod
     def set_primary_key(cls, attr_name):
         """
-        Set the name of the primary key attribute for the model. The new
-        primary key attribute must be one of the defined fields otherwise
+        Set the name of the primary key field for the model. The new
+        primary key field must be one of the defined fields otherwise
         set_primary_key will raise an AttributeError.
         """
         if attr_name not in cls.defined_fields:

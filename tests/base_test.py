@@ -512,13 +512,13 @@ class BaseSaveMethodTestCase(BasePersistenceTestCase):
 
 
 ##
-# update_attributes method
+# update_fields method
 #
 class BaseUpdateAttributesMethodTestCase(BasePersistenceTestCase):
 
     def test_instance_method(self):
         """should be an instance method"""
-        self.assertEqual(self.Test.update_attributes.im_class, self.Test)
+        self.assertEqual(self.Test.update_fields.im_class, self.Test)
 
 
 ##
