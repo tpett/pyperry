@@ -220,6 +220,23 @@ class AttributeAccessTestCase(BaseTestCase):
         self.assertRaises(KeyError, test.__getitem__, 'poop')
         self.assertRaises(KeyError, test.__setitem__, 'poop', 'foo')
 
+class KeysMethodTestCase(BaseTestCase):
+
+    def setUp(self):
+        class Test(pyperry.Base):
+            id = Field()
+            name = Field()
+        self.Test = Test
+        self.test = Test()
+
+    def test_is_a_method(self):
+        """should be an instance method"""
+        assert hasattr(self.test, 'keys')
+
+    def test_returns_defined_fields(self):
+        """should return a list of all fields"""
+        self.assertEqual(self.test.keys(), set(["id", "name"]))
+
 class BaseFetchRecordsMethodTestCase(BaseTestCase):
 
     def test_nil_results(self):

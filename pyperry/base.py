@@ -429,6 +429,13 @@ class Base(object):
         else:
             raise KeyError("Undefined attribute '%s'" % key)
 
+    def keys(self):
+        """
+        Returns list of valid fields accessible through get/set item methods
+
+        """
+        return self.defined_fields
+
     def __dir__(self):
         """
         Adds dynamically defined fields and scopes to the results for dir()
