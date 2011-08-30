@@ -32,18 +32,6 @@ class BaseMeta(type):
 
         """
 
-        # Interpret _config as __configmodel__ effectively obfiscating it
-        if dict_.has_key('_config'):
-            dict_['__configmodel__'] = classmethod(dict_['_config'])
-            del dict_['_config']
-        else:
-            # If the subclass does not define a _config method, it will inherit
-            # the superclass's _config method causing the same _config method
-            # to get called twice, which can cause errors later on. To prevent
-            # this, we can just set the __configmodel__ for the subclass to a
-            # no-op method.
-            dict_['__configmodel__'] = classmethod(lambda cls: None)
-
         # Create the new class
         new = type.__new__(mcs, name, bases, dict_)
 
@@ -83,10 +71,6 @@ class BaseMeta(type):
         # attribute handling
         for key in class_dict.keys():
             setattr(cls, key, class_dict[key])
-
-        # Call configuration method
-        if hasattr(cls, '__configmodel__'):
-            cls.__configmodel__()
 
         cls._docstring = cls.__doc__
         cls.__doc__ = cls.get_docstring()

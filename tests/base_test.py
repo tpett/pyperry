@@ -220,31 +220,6 @@ class AttributeAccessTestCase(BaseTestCase):
         self.assertRaises(KeyError, test.__getitem__, 'poop')
         self.assertRaises(KeyError, test.__setitem__, 'poop', 'foo')
 
-
-##
-# `setup_model` method should be called after class definition if it is defined
-#
-class BaseConfigTestCase(BaseTestCase):
-    def setUp(self):
-        class Foo(pyperry.Base):
-            _passed = False
-
-            def _config(cls):
-                cls._passed = True
-        self.Foo = Foo
-
-    def test_call_config(self):
-        """
-        should be called if it exists
-        should be called with the class as parameter
-        """
-        self.assertTrue(self.Foo._passed)
-
-    def test_cant_call_after_creation(self):
-        """should be obfiscated after class creation"""
-        self.assertTrue(not hasattr(self.Foo, '_config'))
-
-
 class BaseFetchRecordsMethodTestCase(BaseTestCase):
 
     def test_nil_results(self):
