@@ -318,6 +318,11 @@ class BaseComparisonTestCase(BaseTestCase):
         test2 = self.Test2({ 'id': 1, 'name': 'Poop Head' })
         self.assertNotEqual(test1, test2)
 
+    def test_none_case(self):
+        """should compare to None as False"""
+        test = self.Test()
+        assert not test == None
+
 
 class BaseInheritanceTestCase(BaseTestCase):
 

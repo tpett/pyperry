@@ -724,7 +724,9 @@ class Base(object):
 
     def __eq__(self, compare):
         """Compare equality of an object by its fields"""
-        return( self.fields == compare.fields
-                and type(self) == type(compare) )
+        if type(self) != type(compare):
+            return False
+
+        return self.fields == compare.fields
 
 
