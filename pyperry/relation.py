@@ -436,9 +436,8 @@ class Relation(object):
         self._query = None
 
     def __repr__(self):
-        return repr(self.fetch_records())
-        # return("<Relation for %s Query: %s>" %
-        #         (self.klass.__name__, str(self.params)) )
+        return("<Relation for %s Query: %s>" %
+                (self.klass.__name__, str(self.params)) )
 
     def _eval_lambdas(self, value):
         if type(value).__name__ == 'list':
