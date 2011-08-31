@@ -42,6 +42,11 @@ class ResponseClassTestCase(ResponseBaseTestCase):
         """model_attributes method should default to an empty dict"""
         self.assertEqual(self.response.model_attributes(), {})
 
+    def test_model_attributes_method_cache(self):
+        """should read from _model_attributes if set"""
+        self.response._model_attributes = { 'foo': 1 }
+        self.assertEqual(self.response.model_attributes(), { 'foo': 1 })
+
     def test_errors_method(self):
         """errors method should default to an empty dict"""
         self.assertEqual(self.response.errors(), {})

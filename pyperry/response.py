@@ -65,6 +65,9 @@ class Response(object):
         transforming the result of the parsed method.
 
         """
+        if hasattr(self, '_model_attributes'):
+            return self._model_attributes
+
         parsed = self.parsed()
         if isinstance(parsed, dict):
             if len(parsed) == 1 and isinstance(parsed.values()[0], dict):
