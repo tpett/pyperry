@@ -83,6 +83,24 @@ class ClassSetupTestCase(BaseTestCase):
 
         self.assertEqual(relation.query(), { 'order': ['foo'] })
 
+    def test_reader_copied(self):
+        class Parent(pyperry.Base):
+            reader = TestAdapter()
+
+        class Child(Parent):
+            pass
+
+        self.assertNotEqual(Child.reader, Parent.reader)
+
+    def test_writer_copied(self):
+        class Parent(pyperry.Base):
+            writer = TestAdapter()
+
+        class Child(Parent):
+            pass
+
+        self.assertNotEqual(Child.writer, Parent.writer)
+
 ##
 # Test the initializer
 #
@@ -236,6 +254,26 @@ class KeysMethodTestCase(BaseTestCase):
     def test_returns_defined_fields(self):
         """should return a list of all fields"""
         self.assertEqual(self.test.keys(), set(["id", "name"]))
+
+class HasKeyMethodTestCase(BaseTestCase):
+
+    def setUp(self):
+        class Test(pyperry.Base):
+            id = Field()
+            name = Field()
+        self.Test = Test
+        self.test = Test()
+
+    def test_is_a_method(self):
+        """should be an instance method"""
+        assert hasattr(self.test, 'has_key')
+
+    def test_returns_true_when_field_exists(self):
+        self.assertEqual(self.test.has_key('name'), True)
+
+    def test_returns_false_when_field_doesnt_exist(self):
+        self.assertEqual(self.test.has_key('foo'), False)
+
 
 class BaseFetchRecordsMethodTestCase(BaseTestCase):
 

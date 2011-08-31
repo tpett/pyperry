@@ -72,6 +72,11 @@ class BaseMeta(type):
         for key in class_dict.keys():
             setattr(cls, key, class_dict[key])
 
+        if hasattr(cls, 'reader'):
+            cls.reader = deepcopy(cls.reader)
+        if hasattr(cls, 'writer'):
+            cls.writer = deepcopy(cls.writer)
+
         cls._docstring = cls.__doc__
         cls.__doc__ = cls.get_docstring()
 
@@ -433,6 +438,16 @@ class Base(object):
 
         """
         return self.defined_fields
+
+    def has_key(self, key):
+        """
+        Mimicks behavior of dict.has_key()
+
+        returns True when key exists and False when it doesn't
+
+        @param key: key to check for
+        """
+        return key in self.keys()
 
     def __dir__(self):
         """

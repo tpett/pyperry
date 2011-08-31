@@ -84,6 +84,9 @@ class DelayedConfig(object):
     def keys(self):
         return self.config.keys()
 
+    def has_key(self, key):
+        return key in self.keys()
+
 
 class AbstractAdapter(object):
     """The base class for all adapters"""
