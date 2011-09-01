@@ -14,7 +14,7 @@ class Field(object):
     attribute (by %L{MetaBase}).  This must be set or errors will happen.
     """
 
-    def __init__(self, type=None, default=None):
+    def __init__(self, type=None, default=None, name=None):
         """
         Creates a new Field instance
 
@@ -28,7 +28,7 @@ class Field(object):
         self.type = type
         self.default = default
         # Set by the owner class after init
-        self.name = None
+        self.name = name
 
     def __get__(self, instance, owner):
         """Get attribute descriptor"""

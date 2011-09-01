@@ -25,12 +25,15 @@ class ClassSetupTestCase(BaseTestCase):
             id = Field()
             name = Field()
             poop = Field()
+            foo = Field(name='bar')
 
         self.assertEqual(Test.id.name, 'id')
         self.assertEqual(Test.name.name, 'name')
         self.assertEqual(Test.poop.name, 'poop')
+        self.assertEqual(Test.foo.name, 'bar')
 
-        self.assertEqual(Test.defined_fields, set(['id', 'name', 'poop']))
+        self.assertEqual(Test.defined_fields, set(['id', 'name', 'poop',
+                'foo']))
 
     def test_sets_target_and_id_on_associations(self):
         """should set target_klass and id on instances of Association"""

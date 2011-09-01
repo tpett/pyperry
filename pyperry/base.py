@@ -107,7 +107,8 @@ class BaseMeta(type):
 
         """
         if isinstance(value, Field):
-            value.name = key
+            if value.name is None:
+                value.name = key
             cls._define_fields(key)
         elif isinstance(value, Association):
             value.id = key

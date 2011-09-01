@@ -27,9 +27,10 @@ class InitMethodTestCase(AttributeTestCase):
 
     def test_keywords(self):
         """should accept keywords type and default"""
-        attr = Field(type=str, default=6)
+        attr = Field(type=str, default=6, name='foo')
         self.assertEqual(attr.type, str)
         self.assertEqual(attr.default, 6)
+        self.assertEqual(attr.name, 'foo')
 
     def test_sets_name_to_none(self):
         """should set name attribute to None"""
