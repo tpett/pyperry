@@ -122,18 +122,27 @@ class Relation(object):
             'where', 'having']
     aliases = { 'from_': 'from', 'conditions': 'where' }
 
-    def __init__(self, klass):
+    def __init__(self, klass_or_relation):
         """Set klass this relation object is mapped to"""
-        self.klass = klass
         self.params = {}
         self._query = None
         self._records = None
 
-        for method in self.singular_query_methods:
-            self.params[method] = None
-        for method in self.plural_query_methods:
-            self.params[method] = []
-        self.params['modifiers'] = []
+        if isinstance(klass_or_relation, Relation):
+            # Copy constructor
+            relation = klass_or_relation
+            self.klass = relation.klass
+            self.params.update(relation.params)
+            self.params = self._copy_params(self.params)
+        else:
+            # assume a Base instance
+            self.klass = klass_or_relation
+
+            for method in self.singular_query_methods:
+                self.params[method] = None
+            for method in self.plural_query_methods:
+                self.params[method] = []
+            self.params['modifiers'] = []
 
     # Dynamically create the query methods as they are needed
     def __getattr__(self, key):
@@ -347,13 +356,32 @@ class Relation(object):
         a[x].
 
         """
-        a = copy(a)
+        a = a.copy()
         for k, v in b.iteritems():
             if k in a and hasattr(v, 'iteritems'):
                 a[k] = self._deep_merge(a[k], v)
             else:
                 a[k] = v
         return a
+
+    def _copy_params(self, params):
+        """
+        Recursively copy structure with dict or list elements.  This was added
+        because deepmerge() doesn't work correctly with re objects.
+        """
+        if isinstance(params, dict):
+            params = copy(params)
+            for key in params:
+                params[key] = self._copy_params(params[key])
+            return params
+        elif isinstance(params, list):
+            params = copy(params)
+            for i in range(len(params)):
+                params[i] = self._copy_params(params[i])
+            return params
+        else:
+            return copy(params)
+
 
     def modifiers(self, value):
         """
@@ -427,9 +455,7 @@ class Relation(object):
         setattr(self.__class__, key, method)
 
     def clone(self):
-        cloned = deepcopy(self)
-        cloned.reset()
-        return cloned
+        return Relation(self)
 
     def reset(self):
         self._records = None
@@ -442,7 +468,7 @@ class Relation(object):
     def _eval_lambdas(self, value):
         if type(value).__name__ == 'list':
             return [ self._eval_lambdas(item) for item in value ]
-        elif type(value).__name__ == 'function':
+        elif callable(value):
             return value()
         else:
             return value

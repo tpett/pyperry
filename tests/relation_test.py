@@ -1,5 +1,7 @@
 import tests
 import unittest
+import re
+
 import pyperry
 from pyperry import errors
 from pyperry.field import Field
@@ -55,6 +57,18 @@ class InitTestCase(BaseRelationTestCase):
         assert(isinstance(self.relation, Relation))
         self.assertEqual(self.relation.klass, self.Test)
 
+    def test_init_takes_relation(self):
+        """should init with instance of Relation"""
+        rel = Relation(self.Test)
+        rel = rel.where('foo')
+        rel._records = [self.Test()]
+        rel2 = Relation(rel)
+        self.assertEqual(rel2.klass, rel.klass)
+        self.assertEqual(rel2.params, rel.params)
+        self.assertEqual(rel2._records, None)
+        rel.params['where'] = ['bar']
+        self.assertEqual(rel2.params['where'], ['foo'])
+
 ##
 # Test the clone method
 #
@@ -80,6 +94,11 @@ class CloneTestCase(BaseRelationTestCase):
         rel.fetch_records()
         cloned = rel.clone()
         self.assertEqual(cloned._query, None)
+
+    def test_clones_complex_types(self):
+        """should not bork on regular expressions"""
+        rel = self.relation.where(id=re.compile('foo'))
+        rel.clone()
 
 
 
