@@ -387,7 +387,7 @@ class Base(object):
             fields = {}
         fields.update(kwargs)
 
-        self.fields = {}
+        self.fields = self.default_fields()
         self.new_record = new_record
 
         if self.new_record:
@@ -487,6 +487,21 @@ class Base(object):
     #}
 
     #{ Persistence
+    def default_fields(self):
+        """
+        Return a dict of fields and their default values.
+
+        Only lists non-None defaults.
+
+        """
+        defaults = {}
+        for field_name in self.defined_fields:
+            field = getattr(self.__class__, field_name)
+            if field.default is not None:
+                defaults[field_name] = field.default
+        return defaults
+
+
     def set_fields(self, fields=None, **kwargs):
         """
         Set the fields of the object using the provided dictionary.

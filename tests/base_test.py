@@ -115,6 +115,7 @@ class InitializeTestCase(BaseTestCase):
             id = Field()
             name = Field()
             foo = Field(type=int)
+            bar = Field(default=3)
         self.Test = Test
 
     def test_init_fields(self):
@@ -166,6 +167,10 @@ class InitializeTestCase(BaseTestCase):
         t = self.Test(new_record=True, foo='1')
         self.assertEqual(t['foo'], 1)
 
+    def test_sets_field_defaults(self):
+        """should set the default values of fields to the fields dict"""
+        t = self.Test()
+        self.assertEqual(t.bar, 3)
 
 
 ##
