@@ -546,6 +546,8 @@ class BasePersistenceTestCase(BaseTestCase):
         class Test(pyperry.Base):
             id = Field(type=int)
             name = Field()
+            bar_id = Field()
+            bar = associations.BelongsTo()
             reader = TestAdapter()
             writer = TestAdapter(foo='bar')
         self.Test = Test
@@ -596,6 +598,10 @@ class SetFieldsMethodTestCase(BasePersistenceTestCase):
     def test_doesnt_set_non_fields(self):
         self.test.set_fields(foo='bar')
         self.assertEqual(self.test.fields.get('foo'), None)
+
+    def test_allow_setting_association_values(self):
+        self.test.set_fields(bar=self.Test(id=5))
+        self.assertEqual(self.test['bar_id'], 5)
 
 class SetRawFieldsMethodTestCase(BasePersistenceTestCase):
 

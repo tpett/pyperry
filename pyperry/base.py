@@ -378,7 +378,9 @@ class Base(object):
         also use C{kwargs} to specify the fields.
 
         @param fields: dictionary of fields to set on the new instance
-        @param new_record: set new_record flag to C{True} or C{False}.
+        @param new_record: set new_record flag to C{True} or C{False} (this is
+        an internal param and shouldn't be set directly unless you know what
+        you're doing).
 
         """
         if fields is None:
@@ -501,6 +503,8 @@ class Base(object):
             object.set_fields(fields)
 
         Note:  Keys for fields that are not defined will simply be ignored
+        Also Note: Associations can be set through this method and BelongsTo
+        associations when set will also set the associated foreign_key field.
 
         @param fields: dictionary of fields
 
@@ -510,7 +514,8 @@ class Base(object):
         fields.update(kwargs)
 
         for field in fields:
-            if field in self.defined_fields:
+            if (field in self.defined_fields
+                    or field in self.defined_associations):
                 setattr(self, field, fields[field])
 
     def set_raw_fields(self, fields=None, **kwargs):
