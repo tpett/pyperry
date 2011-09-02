@@ -7,6 +7,7 @@ import pyperry
 from pyperry import errors
 from pyperry.field import Field
 from pyperry.scope import Scope, DefaultScope
+from pyperry.response import Response
 import pyperry.association as associations
 
 from tests.fixtures.test_adapter import TestAdapter
@@ -569,6 +570,51 @@ class BaseSaveMethodTestCase(BasePersistenceTestCase):
         model = self.Test({}, False)
         self.assertRaises(errors.PersistenceError, model.save)
 
+##
+# update method
+#
+class BaseUpdateMethodTestCase(BasePersistenceTestCase):
+
+    def test_instance_method(self):
+        """should be an instance method"""
+        self.assertEqual(self.Test.update.im_class, self.Test)
+
+    def test_raises_on_new_record(self):
+        """should raise PersistenceError when called on new_record"""
+        self.assertRaises(errors.PersistenceError, self.test.update)
+
+    def test_calls_save(self):
+        """should call save() when all is well and return"""
+        TestAdapter.data = { 'id': 1 }
+        TestAdapter.return_val = Response(success=True)
+        self.test.new_record = False
+        val = self.test.update()
+        # One for the save, one for the reload
+        self.assertEqual(len(TestAdapter.calls), 2)
+        self.assertEqual(val, True)
+
+##
+# create method
+#
+class BaseCreateMethodTestCase(BasePersistenceTestCase):
+
+    def test_instance_method(self):
+        """should be an instance method"""
+        self.assertEqual(self.Test.create.im_class, self.Test)
+
+    def test_raises_on_new_record(self):
+        """should raise PersistenceError when called on new_record"""
+        self.assertRaises(errors.PersistenceError, self.test.create)
+
+    def test_calls_save(self):
+        """should call save() when all is well and return"""
+        TestAdapter.data = { 'id': 1 }
+        TestAdapter.return_val = Response(success=True)
+        self.test.new_record = False
+        val = self.test.create()
+        # One for the save, one for the reload
+        self.assertEqual(len(TestAdapter.calls), 2)
+        self.assertEqual(val, True)
 
 ##
 # update_fields method

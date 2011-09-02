@@ -1,29 +1,32 @@
-class ConfigurationError(Exception):
+class PerryError(Exception):
     pass
 
-class ArgumentError(Exception):
+class ConfigurationError(PerryError):
     pass
 
-class BrokenAdapterStack(Exception):
+class ArgumentError(PerryError):
     pass
 
-class ModelNotDefined(Exception):
+class BrokenAdapterStack(PerryError):
     pass
 
-class AmbiguousClassName(Exception):
+class ModelNotDefined(PerryError):
     pass
 
-class PersistenceError(Exception):
+class AmbiguousClassName(PerryError):
     pass
 
-class MalformedResponse(Exception):
+class PersistenceError(PerryError):
     pass
 
-class AssociationNotFound(Exception):
+class MalformedResponse(PerryError):
     pass
 
-class AssociationPreloadNotSupported(Exception):
+class AssociationNotFound(PerryError):
     pass
 
-class RecordNotFound(Exception):
+class AssociationPreloadNotSupported(PerryError):
+    pass
+
+class RecordNotFound(PerryError):
     pass

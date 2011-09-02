@@ -576,6 +576,42 @@ class Base(object):
         self.last_writer_response = self.writer(model=self, mode='write')
         return self.last_writer_response.success
 
+    def update(self):
+        """
+        Save the record if it is not a new_record and raise PersistenceError
+        otherwise.
+
+        This will call %L{save()} if the record is not a %C{new_record} and
+        raise a PersistenceError exception otherwise.
+
+        @return: Returns C{True} on success or C{False} on failure
+
+        """
+        if self.new_record:
+            raise errors.PersistenceError(
+                    "update() must only be called on an existing record but "
+                    "new_record attribute is True" )
+
+        return self.save()
+
+    def create(self):
+        """
+        Save the record iff it is a new_record and raise PersistenceError
+        otherwise.
+
+        This will call %L{save()} if the record is a %C{new_record} and
+        raise a PersistenceError exception otherwise.
+
+        @return: Returns C{True} on success or C{False} on failure
+
+        """
+        if self.new_record:
+            raise errors.PersistenceError(
+                    "update() must only be called on a new record but "
+                    "new_record attribute is False" )
+
+        return self.save()
+
     def update_fields(self, fields=None, **kwargs):
         """
         Update the fields with the given dictionary or keywords and save
