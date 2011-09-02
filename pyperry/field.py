@@ -72,7 +72,7 @@ class Field(object):
         """
         Cast the value to self.type if set, otherwise just return value
         """
-        if self.type is not None:
+        if self.type is not None and value is not None:
             return self.type(value)
         else:
             return value

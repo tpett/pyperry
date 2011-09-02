@@ -104,6 +104,17 @@ class DescriptorWithTypeTestCase(DescriptorTestCase):
         self.owner.id = '123'
         self.assertEqual(self.owner.dict['id'], 123)
 
+class CastingNoneTestCase(DescriptorTestCase):
+
+    def test_leaves_none_alone(self):
+        """should not cast None"""
+        attr = Field(type=int)
+        attr.name = 'foo'
+        self.owner.__class__.foo = attr
+        try:
+            self.owner.foo = None
+        except TypeError:
+            assert False, "should not cast None, but did"
 
 class CustomSerializeTestCase(DescriptorTestCase):
     """
