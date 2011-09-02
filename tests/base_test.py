@@ -113,6 +113,7 @@ class InitializeTestCase(BaseTestCase):
         class Test(pyperry.Base):
             id = Field()
             name = Field()
+            foo = Field(type=int)
         self.Test = Test
 
     def test_init_fields(self):
@@ -155,6 +156,15 @@ class InitializeTestCase(BaseTestCase):
         t = self.Test({'id': 3}, False, name='test')
         self.assertEqual(t.id, 3)
         self.assertEqual(t.name, 'test')
+
+    def test_when_existing_record_set_raw_fields(self):
+        t = self.Test(new_record=False, foo='1')
+        self.assertEqual(t['foo'], '1')
+
+    def test_when_new_record_set_attr_fields(self):
+        t = self.Test(new_record=True, foo='1')
+        self.assertEqual(t['foo'], 1)
+
 
 
 ##
@@ -534,7 +544,8 @@ class BasePersistenceTestCase(BaseTestCase):
     def setUp(self):
         TestAdapter.reset_calls()
         class Test(pyperry.Base):
-            id = Field()
+            id = Field(type=int)
+            name = Field()
             reader = TestAdapter()
             writer = TestAdapter(foo='bar')
         self.Test = Test
@@ -566,6 +577,45 @@ class BaseUpdateAttributesMethodTestCase(BasePersistenceTestCase):
         """should be an instance method"""
         self.assertEqual(self.Test.update_fields.im_class, self.Test)
 
+class SetFieldsMethodTestCase(BasePersistenceTestCase):
+
+    def test_instance_method(self):
+        """should be an instance method"""
+        self.assertEqual(self.Test.set_fields.im_class, self.Test)
+
+    def test_accepts_dict_and_kwargs(self):
+        """should accept dict and kwargs"""
+        self.test.set_fields({ 'id': 1 }, name='bar')
+        self.assertEqual(self.test.fields, { 'id': 1, 'name': 'bar' })
+
+    def test_sets_field_from_dict(self):
+        """should set the python attribute for each item in the dict"""
+        self.test.set_fields(id='1')
+        self.assertEqual(self.test['id'], 1)
+
+    def test_doesnt_set_non_fields(self):
+        self.test.set_fields(foo='bar')
+        self.assertEqual(self.test.fields.get('foo'), None)
+
+class SetRawFieldsMethodTestCase(BasePersistenceTestCase):
+
+    def test_instance_method(self):
+        """should be an instance method"""
+        self.assertEqual(self.Test.set_raw_fields.im_class, self.Test)
+
+    def test_accepts_dict_and_kwargs(self):
+        """should accept dict and kwargs"""
+        self.test.set_raw_fields({ 'id': 1 }, name='bar')
+        self.assertEqual(self.test.fields, { 'id': 1, 'name': 'bar' })
+
+    def test_sets_field_from_dict(self):
+        """should set the python attribute for each item in the dict"""
+        self.test.set_raw_fields(id='1')
+        self.assertEqual(self.test['id'], '1')
+
+    def test_doesnt_set_non_fields(self):
+        self.test.set_raw_fields(foo='bar')
+        self.assertEqual(self.test.fields.get('foo'), None)
 
 ##
 # delete method

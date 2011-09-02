@@ -368,7 +368,7 @@ class Base(object):
 
     __metaclass__ = BaseMeta
 
-    def __init__(self, fields={}, new_record=True, **kwargs):
+    def __init__(self, fields=None, new_record=True, **kwargs):
         """
         Initialize a new pyperry object with specified fields
 
@@ -381,10 +381,18 @@ class Base(object):
         @param new_record: set new_record flag to C{True} or C{False}.
 
         """
+        if fields is None:
+            fields = {}
+        fields.update(kwargs)
+
         self.fields = {}
-        self.set_fields(fields)
-        self.set_fields(kwargs)
         self.new_record = new_record
+
+        if self.new_record:
+            self.set_fields(fields)
+        else:
+            self.set_raw_fields(fields)
+
         self.saved = None
         self.errors = {}
         self._frozen = False
@@ -481,7 +489,18 @@ class Base(object):
         """
         Set the fields of the object using the provided dictionary.
 
-        Only fields listed in _defined_fields will be set.
+        Only fields listed in _defined_fields will be set.  This method will
+        route all setting through the Field construct, and is equivalent to
+        setting each key to the equivalent attribute on the class::
+
+            # This is equivalent:
+            for field in fields:
+                setattr(object, field, fields[field])
+
+            # To this (except safety checks):
+            object.set_fields(fields)
+
+        Note:  Keys for fields that are not defined will simply be ignored
 
         @param fields: dictionary of fields
 
@@ -490,9 +509,38 @@ class Base(object):
             fields = {}
         fields.update(kwargs)
 
-        for field in fields.keys():
+        for field in fields:
+            if field in self.defined_fields:
+                setattr(self, field, fields[field])
+
+    def set_raw_fields(self, fields=None, **kwargs):
+        """
+        Set the raw fields dict of the object using the provided dictionary.
+
+        Like set_fields, only fields listed in _defined_fields will be set.
+        This method will bypass all logic in the Field instance class and is
+        the same as setting each key in `fields` via the subscript operator::
+
+            # This is equivalent
+            for field in fields:
+                object[field] = fields[field]
+
+            # To this (except safety checks):
+            object.set_raw_fields(fields)
+
+        Note:  Keys for fields that are not defined will simply be ignored
+
+        @param fields: dictionary of fields
+
+        """
+        if fields is None:
+            fields = {}
+        fields.update(kwargs)
+
+        for field in fields:
             if field in self.defined_fields:
                 self[field] = fields[field]
+
 
     def save(self):
         """
