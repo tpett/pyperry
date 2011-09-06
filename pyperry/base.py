@@ -168,6 +168,7 @@ class BaseMeta(type):
         class_name = name[-1]
         if len(name) == 2:
             namespace = name[0]
+            cls._auto_import(namespace)
 
         if cls.defined_models.has_key(class_name):
             classes = copy(cls.defined_models[class_name])
@@ -182,6 +183,17 @@ class BaseMeta(type):
             return classes
         else:
             return []
+
+    def _auto_import(cls, package):
+        """
+        Tries to import package by absolute path.  Fails silently on failure.
+
+        """
+        try:
+            # Do an import Force absolute imports
+            __import__(package, globals(), locals(), [], 0)
+        except ImportError, err:
+            pass
 
     def get_docstring(cls):
         doc_parts = []

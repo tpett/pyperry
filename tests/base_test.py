@@ -1,3 +1,4 @@
+import sys
 import tests
 import unittest
 from nose.plugins.skip import SkipTest
@@ -337,6 +338,45 @@ class BaseResolveNameMethodTestCase(BaseTestCase):
 
         result = pyperry.Base.resolve_name('base_test.Article')
         self.assertEqual(result, [Article])
+
+
+class BaseMethodAutoImportTestCase(BaseTestCase):
+
+    def setUp(self):
+        super(BaseMethodAutoImportTestCase, self).setUp()
+        sys.path.insert(0, tests.test_sys_path_dir)
+
+    def tearDown(self):
+        super(BaseMethodAutoImportTestCase, self).tearDown()
+        sys.path.remove(tests.test_sys_path_dir)
+
+    def test_auto_imports(self):
+        """should import modules if needed and possible"""
+        self.assertFalse(sys.modules.has_key('pyperry_foobar'))
+        pyperry.Base._auto_import('pyperry_foobar.foo.bar')
+        self.assertTrue(sys.modules.has_key('pyperry_foobar'))
+        try:
+            import pyperry_foobar.foo.bar
+        except ImportError:
+            assert False, "Failed to import submodules of pyperry_foobar"
+
+    # This is really an integration test
+    def test_called_by_resolve_name(self):
+        """should allow models not yet imported to be referenced"""
+        class Test(pyperry.Base):
+            id = Field()
+            baz_id = Field()
+            baz = associations.BelongsTo(
+                    class_name='pyperry_foobar.foo.baz.Bazaroo5234')
+
+        self.assertFalse(Test.defined_models.has_key('Bazaroo5234'))
+        cls = Test.baz.source_klass()
+        self.assertTrue(Test.defined_models.has_key('Bazaroo5234'))
+
+        import pyperry_foobar.foo.baz
+        self.assertEqual(cls, pyperry_foobar.foo.baz.Bazaroo5234)
+
+
 
 class BaseComparisonTestCase(BaseTestCase):
 
