@@ -6,6 +6,7 @@ import copy
 
 import pyperry
 from pyperry import errors
+from pyperry import callbacks
 from pyperry.field import Field
 from pyperry.scope import Scope, DefaultScope
 from pyperry.response import Response
@@ -105,6 +106,31 @@ class ClassSetupTestCase(BaseTestCase):
             pass
 
         self.assertNotEqual(Child.writer, Parent.writer)
+
+    def test_callbacks_registered(self):
+        class Test(pyperry.Base):
+            @callbacks.before_save
+            def foo(self): pass
+            @callbacks.before_update
+            def bar(self): pass
+
+        self.assertTrue(hasattr(Test, 'callback_manager'))
+        self.assertTrue(isinstance(Test.callback_manager,
+            callbacks.CallbackManager ))
+
+        self.assertEqual(
+                Test.callback_manager.callbacks[callbacks.before_save],
+                [Test.foo] )
+        self.assertEqual(
+                Test.callback_manager.callbacks[callbacks.before_update],
+                [Test.bar] )
+
+    def test_callback_manager_copied(self):
+        class Parent(pyperry.Base): pass
+        class Child(pyperry.Base): pass
+
+        self.assertTrue(Parent.callback_manager is not
+                Child.callback_manager)
 
 ##
 # Test the initializer
@@ -734,6 +760,10 @@ class BaseDeleteMethodTestCase(BasePersistenceTestCase):
         self.assertRaises(errors.PersistenceError, model.delete)
 
 
+##
+# Callback triggering
+#
+# TODO: Add callback triggering
 
 ##
 # reload method

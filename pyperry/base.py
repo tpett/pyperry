@@ -4,6 +4,7 @@ from copy import deepcopy, copy
 import traceback
 
 from pyperry import errors
+from pyperry import callbacks
 from pyperry.relation import Relation
 from pyperry.adapter.abstract_adapter import AbstractAdapter
 from pyperry.association import BelongsTo, HasMany, HasOne
@@ -23,7 +24,7 @@ class BaseMeta(type):
 
     defined_models = {}
 
-    def __new__(mcs, name, bases, dict_):
+    def __new__(mcs, name, bases, class_dict):
         """
         Called any time a new Base class is created using this metaclass
 
@@ -33,33 +34,14 @@ class BaseMeta(type):
         """
 
         # Create the new class
-        new = type.__new__(mcs, name, bases, dict_)
-
-        # Create a default primary_key value
-        if not hasattr(new, '_primary_key'):
-            new._primary_key = 'id'
-
-        # Create fresh adapter dict
-        new._adapters = {}
-
-        # Define any fields set during class definition
-        if not hasattr(new, 'defined_fields'):
-            new.defined_fields = set()
-        else:
-            new.defined_fields = deepcopy(new.defined_fields)
-
-        # Define any associations set during class definition
-        if not hasattr(new, 'defined_associations'):
-            new.defined_associations = {}
-        else:
-            new.defined_associations = deepcopy(new.defined_associations)
+        cls = type.__new__(mcs, name, bases, class_dict)
 
         # Track model definitions by name
         if not mcs.defined_models.has_key(name):
             mcs.defined_models[name] = []
-        mcs.defined_models[name].append(new)
+        mcs.defined_models[name].append(cls)
 
-        return new
+        return cls
 
     _relation_delegates = (Relation.singular_query_methods +
                 Relation.plural_query_methods +
@@ -67,6 +49,28 @@ class BaseMeta(type):
 
     def __init__(cls, name, bases, class_dict):
         """Class has been created now setup additional needs"""
+        # Create a default primary_key value
+        if not hasattr(cls, '_primary_key'):
+            cls._primary_key = 'id'
+
+        # Define any fields set during class definition
+        if not hasattr(cls, 'defined_fields'):
+            cls.defined_fields = set()
+        else:
+            cls.defined_fields = copy(cls.defined_fields)
+
+        # Define any associations set during class definition
+        if not hasattr(cls, 'defined_associations'):
+            cls.defined_associations = {}
+        else:
+            cls.defined_associations = deepcopy(cls.defined_associations)
+
+        if not hasattr(cls, 'callback_manager'):
+            cls.callback_manager = callbacks.CallbackManager()
+        else:
+            cls.callback_manager = callbacks.CallbackManager(
+                    cls.callback_manager )
+
         # Force calling of __setattr__ for each defined attribute for special
         # attribute handling
         for key in class_dict.keys():
@@ -100,6 +104,7 @@ class BaseMeta(type):
             - %L{Association}
             - %L{DefaultScope} (special case of Scope)
             - %L{Scope}
+            - %L{Callback}
 
         This method is also called for each attribute set during class creation
         allowing for common behavior to be applied whether set during class
@@ -123,6 +128,8 @@ class BaseMeta(type):
             value.__name__ = key
             if not hasattr(cls, 'scopes'): cls.scopes = {}
             cls.scopes[key] = value
+        elif isinstance(value, callbacks.Callback):
+            cls.callback_manager.register(value)
 
         type.__setattr__(cls, key, value)
 
