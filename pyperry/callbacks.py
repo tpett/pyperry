@@ -97,7 +97,7 @@ class after_load(Callback):
 
 class before_create(Callback):
     def __init__(self, callback):
-        super(before_Create, self).__init__(callback)
+        super(before_create, self).__init__(callback)
         self.action = 'create'
         self.when = 'before'
 

@@ -22,6 +22,10 @@ class TestAdapter(AbstractAdapter):
         self.calls.append(('write', deepcopy(kwargs)))
         return self.return_val
 
+    def delete(self, **kwargs):
+        self.calls.append(('delete', deepcopy(kwargs)))
+        return self.return_val
+
 
     @classmethod
     def reset_calls(cls):

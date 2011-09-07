@@ -763,7 +763,86 @@ class BaseDeleteMethodTestCase(BasePersistenceTestCase):
 ##
 # Callback triggering
 #
-# TODO: Add callback triggering
+class BaseCallbackTriggeringTestCase(BaseTestCase):
+
+    def setUp(self):
+        super(BaseCallbackTriggeringTestCase, self).setUp()
+        TestAdapter.data = { 'id': 1 }
+        TestAdapter.return_val = Response(success=True)
+        TestAdapter.return_val._parsed = { 'id': 1 }
+        c_bld = callbacks.before_load
+        c_ald = callbacks.after_load
+        c_bsv = callbacks.before_save
+        c_asv = callbacks.after_save
+        c_bct = callbacks.before_create
+        c_act = callbacks.after_create
+        c_bup = callbacks.before_update
+        c_aup = callbacks.after_update
+        c_bde = callbacks.before_destroy
+        c_ade = callbacks.after_destroy
+        class CallbackTest(pyperry.Base):
+            id = Field()
+            reader = TestAdapter()
+            writer = TestAdapter()
+            log = []
+            bld = c_bld(lambda(self): self.log.append('before_load'))
+            ald = c_ald(lambda(self): self.log.append('after_load'))
+            bsv = c_bsv(lambda(self): self.log.append('before_save'))
+            asv = c_asv(lambda(self): self.log.append('after_save'))
+            bct = c_bct(lambda(self): self.log.append('before_create'))
+            act = c_act(lambda(self): self.log.append('after_create'))
+            bup = c_bup(lambda(self): self.log.append('before_update'))
+            aup = c_aup(lambda(self): self.log.append('after_update'))
+            bde = c_bde(lambda(self): self.log.append('before_destroy'))
+            ade = c_ade(lambda(self): self.log.append('after_destroy'))
+
+        self.CallbackTest = CallbackTest
+
+    def test_load(self):
+        self.CallbackTest()
+        self.assertEqual(self.CallbackTest.log, ['before_load', 'after_load'])
+
+    def test_create(self):
+        cb = self.CallbackTest()
+        self.CallbackTest.log = []
+        cb.save()
+        self.assertEqual(self.CallbackTest.log, [
+                'before_save', 'before_create', 'before_load', 'after_load',
+                'after_create', 'after_save'])
+
+    def test_create_without_callbacks(self):
+        cb = self.CallbackTest()
+        self.CallbackTest.log = []
+        cb.save(run_callbacks=False)
+        self.assertEqual(self.CallbackTest.log, ['before_load', 'after_load'])
+
+    def test_update(self):
+        cb = self.CallbackTest(new_record=False, id=1)
+        self.CallbackTest.log = []
+        cb.save()
+        self.assertEqual(self.CallbackTest.log, [
+                'before_save', 'before_update', 'before_load', 'after_load',
+                'after_update', 'after_save'])
+
+    def test_update_without_callbacks(self):
+        cb = self.CallbackTest(new_record=False, id=1)
+        self.CallbackTest.log = []
+        cb.save(run_callbacks=False)
+        self.assertEqual(self.CallbackTest.log, ['before_load', 'after_load'])
+
+    def test_destroy(self):
+        cb = self.CallbackTest(new_record=False, id=1)
+        self.CallbackTest.log = []
+        cb.delete()
+        self.assertEqual(self.CallbackTest.log,
+                ['before_destroy', 'after_destroy'])
+
+    def test_update_without_callbacks(self):
+        cb = self.CallbackTest(new_record=False, id=1)
+        self.CallbackTest.log = []
+        cb.delete(run_callbacks=False)
+        self.assertEqual(self.CallbackTest.log, [])
+
 
 ##
 # reload method

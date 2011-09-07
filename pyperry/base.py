@@ -406,17 +406,21 @@ class Base(object):
             fields = {}
         fields.update(kwargs)
 
-        self.fields = self.default_fields()
+        self.saved = None
+        self.errors = {}
+        self._frozen = False
         self.new_record = new_record
+
+        self.callback_manager.trigger(callbacks.before_load, self)
+
+        self.fields = self.default_fields()
 
         if self.new_record:
             self.set_fields(fields)
         else:
             self.set_raw_fields(fields)
 
-        self.saved = None
-        self.errors = {}
-        self._frozen = False
+        self.callback_manager.trigger(callbacks.after_load, self)
 
     #{ Dict-like access
     def __getitem__(self, key):
@@ -581,7 +585,7 @@ class Base(object):
                 self[field] = fields[field]
 
 
-    def save(self):
+    def save(self, run_callbacks=True):
         """
         Save the current value of the model's data fields through the write
         adapter.
@@ -607,10 +611,32 @@ class Base(object):
             raise errors.PersistenceError(
                     "cannot save model without a primary key value")
 
+        create_operation = self.new_record
+
+        # Before Callbacks
+        if run_callbacks:
+            self.callback_manager.trigger(callbacks.before_save, self)
+
+            if create_operation:
+                self.callback_manager.trigger(callbacks.before_create, self)
+            else:
+                self.callback_manager.trigger(callbacks.before_update, self)
+
+        # Run the save
         self.last_writer_response = self.writer(model=self, mode='write')
+
+        # After callbacks
+        if run_callbacks:
+            if create_operation:
+                self.callback_manager.trigger(callbacks.after_create, self)
+            else:
+                self.callback_manager.trigger(callbacks.after_update, self)
+
+            self.callback_manager.trigger(callbacks.after_save, self)
+
         return self.last_writer_response.success
 
-    def update(self):
+    def update(self, **kwargs):
         """
         Save the record if it is not a new_record and raise PersistenceError
         otherwise.
@@ -626,9 +652,9 @@ class Base(object):
                     "update() must only be called on an existing record but "
                     "new_record attribute is True" )
 
-        return self.save()
+        return self.save(**kwargs)
 
-    def create(self):
+    def create(self, **kwargs):
         """
         Save the record iff it is a new_record and raise PersistenceError
         otherwise.
@@ -644,7 +670,7 @@ class Base(object):
                     "update() must only be called on a new record but "
                     "new_record attribute is False" )
 
-        return self.save()
+        return self.save(**kwargs)
 
     def update_fields(self, fields=None, **kwargs):
         """
@@ -671,7 +697,7 @@ class Base(object):
 
         return self.save()
 
-    def delete(self):
+    def delete(self, run_callbacks=True):
         """
         Removes this model from the data store
 
@@ -699,7 +725,14 @@ class Base(object):
             raise errors.PersistenceError(
                     'cannot delete a model without a primary key value')
 
+        if run_callbacks:
+            self.callback_manager.trigger(callbacks.before_destroy, self)
+
         self.last_writer_response = self.writer(model=self, mode='delete')
+
+        if run_callbacks:
+            self.callback_manager.trigger(callbacks.after_destroy, self)
+
         return self.last_writer_response.success
 
     #}
