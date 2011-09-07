@@ -7,8 +7,7 @@ from pyperry import errors
 from pyperry import callbacks
 from pyperry.relation import Relation
 from pyperry.adapter.abstract_adapter import AbstractAdapter
-from pyperry.association import BelongsTo, HasMany, HasOne
-from pyperry.association import Association
+from pyperry.association import BelongsTo, HasMany, HasOne, Association
 from pyperry.field import Field
 from pyperry.scope import Scope, DefaultScope
 
