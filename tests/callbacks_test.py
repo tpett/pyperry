@@ -4,15 +4,78 @@ from nose.plugins.skip import SkipTest
 
 import pyperry
 from pyperry import errors
-from pyperry.callbacks import _Callback as Callback
+from pyperry import callbacks
+from pyperry.callbacks import Callback, CallbackManager
 
+# Testing of CallbackManager
+#
+class CallbackManagerTestCase(unittest.TestCase):
+    pass
+
+class CallbackManagerInitTestCase(CallbackManagerTestCase):
+
+    def test_sets_callbacks(self):
+        """should set callbacks attribute to empty dict"""
+        m = CallbackManager()
+        self.assertTrue(hasattr(m, 'callbacks'))
+        self.assertEqual(m.callbacks, {})
+
+    def test_constructs_from_instance(self):
+        """should construct copy when instance passed"""
+        m = CallbackManager()
+        m.callbacks['foo'] = 'bar'
+        m2 = CallbackManager(m)
+
+        self.assertEqual(m.callbacks, m2.callbacks)
+
+        m.callbacks['foo'] = 'baz'
+
+        self.assertEqual(m2.callbacks['foo'], 'bar')
+
+    def test_requires_callback_manager_type(self):
+        """should error on bad instance param"""
+        self.assertRaises(errors.ConfigurationError, CallbackManager, 2)
+
+class CallbackManagerRegisterMethod(CallbackManagerTestCase):
+
+    def test_registers_callback_by_type(self):
+        """should create key from type pointing to list containing callback"""
+        m = CallbackManager()
+        cb = callbacks.before_load(lambda: 1)
+
+        m.register(cb)
+        self.assertEqual(
+                m.callbacks[callbacks.before_load],
+                [cb] )
+
+class CallbackManagerTriggerMethod(CallbackManagerTestCase):
+
+    def test_trigger_callbacks_of_specified_type(self):
+        """should trigger each registered callback"""
+        m = CallbackManager()
+        i = []
+        def call(arg): arg.append(1)
+        cb = callbacks.before_save(call)
+
+        m.register(cb)
+        m.register(cb)
+
+        m.trigger(callbacks.before_save, i)
+
+        self.assertEqual(len(i), 2)
+
+
+
+
+# Testing of Callback and subclasses
+#
 class CallbacksTestCase(unittest.TestCase):
     pass
 
-class InitMethodTestCase(CallbacksTestCase):
+class CallbackInitMethodTestCase(CallbacksTestCase):
 
     def setUp(self):
-        super(InitMethodTestCase, self).setUp()
+        super(CallbackInitMethodTestCase, self).setUp()
         self.method = lambda(self): 'foo'
         self.callback = Callback(self.method)
 
@@ -34,7 +97,7 @@ class InitMethodTestCase(CallbacksTestCase):
         """should ensure callback is callable"""
         self.assertRaises(errors.ConfigurationError, Callback, 3)
 
-class CallMethodTestCase(CallbacksTestCase):
+class CallbackCallMethodTestCase(CallbacksTestCase):
 
     def test_calls_callable(self):
         """should call the callable and return result"""
