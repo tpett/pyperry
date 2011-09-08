@@ -726,12 +726,12 @@ class Base(object):
                     'cannot delete a model without a primary key value')
 
         if run_callbacks:
-            self.callback_manager.trigger(callbacks.before_destroy, self)
+            self.callback_manager.trigger(callbacks.before_delete, self)
 
         self.writer.last_response = self.writer(model=self, mode='delete')
 
         if run_callbacks:
-            self.callback_manager.trigger(callbacks.after_destroy, self)
+            self.callback_manager.trigger(callbacks.after_delete, self)
 
         return self.writer.last_response.success
 

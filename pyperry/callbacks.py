@@ -131,15 +131,15 @@ class after_save(Callback):
         self.action = 'save'
         self.when = 'after'
 
-class before_destroy(Callback):
+class before_delete(Callback):
     def __init__(self, callback):
-        super(before_destroy, self).__init__(callback)
-        self.action = 'destroy'
+        super(before_delete, self).__init__(callback)
+        self.action = 'delete'
         self.when = 'before'
 
-class after_destroy(Callback):
+class after_delete(Callback):
     def __init__(self, callback):
-        super(after_destroy, self).__init__(callback)
-        self.action = 'destroy'
+        super(after_delete, self).__init__(callback)
+        self.action = 'delete'
         self.when = 'after'
 

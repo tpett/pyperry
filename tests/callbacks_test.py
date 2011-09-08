@@ -118,7 +118,7 @@ class CallbackChildTest(CallbacksTestCase):
 
 def set_callback_dynamic_tests():
     for when in ['before', 'after']:
-        for action in ['load', 'create', 'update', 'save', 'destroy']:
+        for action in ['load', 'create', 'update', 'save', 'delete']:
             name = '%s_%s' % (when, action)
 
             def method(self):

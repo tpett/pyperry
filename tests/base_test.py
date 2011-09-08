@@ -780,8 +780,8 @@ class BaseCallbackTriggeringTestCase(BaseTestCase):
         c_act = callbacks.after_create
         c_bup = callbacks.before_update
         c_aup = callbacks.after_update
-        c_bde = callbacks.before_destroy
-        c_ade = callbacks.after_destroy
+        c_bde = callbacks.before_delete
+        c_ade = callbacks.after_delete
         class CallbackTest(pyperry.Base):
             id = Field()
             reader = TestAdapter()
@@ -795,8 +795,8 @@ class BaseCallbackTriggeringTestCase(BaseTestCase):
             act = c_act(lambda(self): self.log.append('after_create'))
             bup = c_bup(lambda(self): self.log.append('before_update'))
             aup = c_aup(lambda(self): self.log.append('after_update'))
-            bde = c_bde(lambda(self): self.log.append('before_destroy'))
-            ade = c_ade(lambda(self): self.log.append('after_destroy'))
+            bde = c_bde(lambda(self): self.log.append('before_delete'))
+            ade = c_ade(lambda(self): self.log.append('after_delete'))
 
         self.CallbackTest = CallbackTest
 
@@ -832,12 +832,12 @@ class BaseCallbackTriggeringTestCase(BaseTestCase):
         cb.save(run_callbacks=False)
         self.assertEqual(self.CallbackTest.log, ['before_load', 'after_load'])
 
-    def test_destroy(self):
+    def test_delete(self):
         cb = self.CallbackTest(new_record=False, id=1)
         self.CallbackTest.log = []
         cb.delete()
         self.assertEqual(self.CallbackTest.log,
-                ['before_destroy', 'after_destroy'])
+                ['before_delete', 'after_delete'])
 
     def test_update_without_callbacks(self):
         cb = self.CallbackTest(new_record=False, id=1)
