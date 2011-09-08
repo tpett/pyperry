@@ -15,6 +15,10 @@ class BERTRPC(AbstractAdapter):
 
     """
 
+    def __init__(self, *args, **kwargs):
+        super(BERTRPC, self).__init__(*args, **kwargs)
+        self.features['batch_write'] = True
+
     def read(self, **kwargs):
         options = kwargs['relation'].query()
         options.update(self.config['base_options'])
@@ -25,23 +29,33 @@ class BERTRPC(AbstractAdapter):
         return self._call_server(options)
 
     def write(self, **kwargs):
-        model = kwargs['model']
+        model = kwargs.get('model')
         options = self.config['base_options'].copy()
-        options['fields'] = model.fields.copy()
 
-        if model.new_record:
-            options['mode'] = 'create'
+        if model:
+            options['fields'] = model.fields.copy()
+
+            if model.new_record:
+                options['mode'] = 'create'
+            else:
+                options['mode'] = 'update'
+                options['where'] = [{ model.pk_attr(): model.pk_value() }]
         else:
             options['mode'] = 'update'
-            options['where'] = [{ model.pk_attr(): model.pk_value() }]
+            options['where'] = kwargs['where']
+            options['fields'] = kwargs['fields']
 
         return self._parse_response(self._call_server(options))
 
     def delete(self, **kwargs):
-        model = kwargs['model']
+        model = kwargs.get('model')
         options = self.config['base_options'].copy()
         options['mode'] = 'delete'
-        options['where'] = [{ model.pk_attr(): model.pk_value() }]
+
+        if model:
+            options['where'] = [{ model.pk_attr(): model.pk_value() }]
+        else:
+            options['where'] = kwargs['where']
 
         return self._parse_response(self._call_server(options))
 

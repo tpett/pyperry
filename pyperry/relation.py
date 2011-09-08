@@ -235,7 +235,7 @@ class Relation(object):
                 raise PersistenceError(
                         "You cannot batch update a field that is not defined")
 
-        self._ensure_batch_write_allowed()
+        self._ensure_batch_write_allowed(action='update_all')
 
         self.klass.writer.last_response = self.klass.writer(
                 mode='write', where=self.query().get('where'), fields=args)
@@ -243,18 +243,18 @@ class Relation(object):
         return self.klass.writer.last_response.success
 
     def delete_all(self):
-        self._ensure_batch_write_allowed()
+        self._ensure_batch_write_allowed(action='delete_all')
         self.klass.writer.last_response = self.klass.writer(
                 mode='delete', where=self.query().get('where'))
         return self.klass.writer.last_response.success
 
-    def _ensure_batch_write_allowed(self):
+    def _ensure_batch_write_allowed(self, action='batch actions'):
         if not hasattr(self.klass, 'writer') or self.klass.writer is None:
             raise ConfigurationError("Write adapter is not configured")
 
         if not self.klass.writer.features['batch_write']:
             raise ConfigurationError(
-                    "Write adapter does not support update_all")
+                    "Write adapter does not support %s" % (action))
 
     def _record_not_found_message(self, pk_array, results):
         err = "Couldn't find %s records for all primary key values in %s. "
