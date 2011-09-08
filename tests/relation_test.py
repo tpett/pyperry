@@ -652,21 +652,106 @@ class RelationFirstMethodTestCase(BaseRelationTestCase):
         self.assertEqual(result, None)
 
 ##
-# Find method
+# update_all method
 #
-# If first argument is an integer or list it will assume they are primary keys
-# and scope the query with that requirement.  If any of the records were not
-# returned a RecordNotFound exception will be raised.
+# Tries to run a batch update on the current relation scope.  The adapter must
+# support 'where' kw arg to the write method
 #
-# TODO: Add this method
+class UpdateAllMethodTestCase(BaseRelationTestCase):
+    """Relation class update_all method test case"""
+
+    def setUp(self):
+        super(UpdateAllMethodTestCase, self).setUp()
+        class Foo(pyperry.Base):
+            id = Field()
+            foo = Field()
+            baz = Field()
+            writer = TestAdapter()
+            writer.features['batch_write'] = True
+        self.Foo = Foo
+
+    def test_exists(self):
+        self.assertTrue(hasattr(Relation, 'update_all'))
+
+    def test_calls_write_adapter_for_klass(self):
+        self.Foo.where(foo='baz').update_all({ 'foo': 'bar' }, baz=1)
+        self.assertEqual(len(TestAdapter.calls), 1)
+        self.assertEqual(TestAdapter.calls[0][1]['where'], [{'foo': 'baz'}])
+        self.assertEqual(
+                TestAdapter.calls[0][1]['fields'], {'foo': 'bar', 'baz': 1})
+
+    def test_requires_fields_are_defined(self):
+        """should raise PersistenceError if fields not defined"""
+        self.assertRaises(errors.PersistenceError,
+                self.Foo.where().update_all, bar=1)
+
+    def test_returns_result(self):
+        result = self.Foo.where().update_all(foo=1)
+        self.assertEqual(result, True)
+
+    def test_delegates_from_base(self):
+        try:
+            self.Foo.update_all(foo=1)
+        except:
+            assert False, "Base should delegate to Relation's update_all"
+
+    def test_raises_if_not_supported(self):
+        """should raise ConfigurationError if batch_write not implemented"""
+        self.Foo.writer.features['batch_write'] = False
+        self.assertRaises(errors.ConfigurationError, self.Foo.update_all, {})
+
+    def test_raises_if_no_write_adapter(self):
+        """should raise ConfigurationError if no write adapter"""
+        class Bar(pyperry.Base): pass
+        self.assertRaises(errors.ConfigurationError, Bar.update_all, {})
+
 
 ##
-# Fresh scope
+# delete_all method
 #
-# Ensures that next call will bypass any cached values and refetch data from
-# the data store.
+# Tries to run a batch delete on the current relation scope.  The adapter must
+# support 'where' kw arg to the delete method
 #
-# TODO: Add this method
+class DeleteAllMethodTestCase(BaseRelationTestCase):
+
+    def setUp(self):
+        super(DeleteAllMethodTestCase, self).setUp()
+        class Foo(pyperry.Base):
+            id = Field()
+            foo = Field()
+            writer = TestAdapter()
+            writer.features['batch_write'] = True
+        self.Foo = Foo
+
+
+        self.assertTrue(hasattr(Relation, 'delete_all'))
+
+    def test_deletes(self):
+        self.Foo.where(foo='baz').delete_all()
+        self.assertEqual(len(TestAdapter.calls), 1)
+        self.assertEqual(TestAdapter.calls[0][0], 'delete')
+        self.assertEqual(TestAdapter.calls[0][1]['where'], [{'foo': 'baz'}])
+
+    def test_returns_result(self):
+        result = self.Foo.where().delete_all()
+        self.assertEqual(result, True)
+
+    def test_delegates_from_base(self):
+        try:
+            self.Foo.delete_all()
+        except:
+            assert False, "Base should delegate to Relation's delete_all"
+
+    def test_raises_if_not_supported(self):
+        """should raise ConfigurationError if batch_write not implemented"""
+        self.Foo.writer.features['batch_write'] = False
+        self.assertRaises(errors.ConfigurationError, self.Foo.delete_all)
+
+    def test_raises_if_no_write_adapter(self):
+        """should raise ConfigurationError if no write adapter"""
+        class Bar(pyperry.Base): pass
+        self.assertRaises(errors.ConfigurationError, Bar.delete_all)
+
 
 
 ##

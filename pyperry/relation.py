@@ -1,5 +1,6 @@
 from copy import copy, deepcopy
-from pyperry.errors import ArgumentError, RecordNotFound
+from pyperry.errors import ArgumentError, RecordNotFound, PersistenceError
+from pyperry.errors import ConfigurationError
 
 class DelayedMerge(object):
     """
@@ -223,6 +224,37 @@ class Relation(object):
             return result
         else:
             raise ArgumentError('unkown arguments for find method')
+
+    def update_all(self, args=None, **kwargs):
+        if args is None:
+            args = {}
+        args.update(kwargs)
+
+        for arg in args:
+            if arg not in self.klass.defined_fields:
+                raise PersistenceError(
+                        "You cannot batch update a field that is not defined")
+
+        self._ensure_batch_write_allowed()
+
+        self.klass.writer.last_response = self.klass.writer(
+                mode='write', where=self.query().get('where'), fields=args)
+
+        return self.klass.writer.last_response.success
+
+    def delete_all(self):
+        self._ensure_batch_write_allowed()
+        self.klass.writer.last_response = self.klass.writer(
+                mode='delete', where=self.query().get('where'))
+        return self.klass.writer.last_response.success
+
+    def _ensure_batch_write_allowed(self):
+        if not hasattr(self.klass, 'writer') or self.klass.writer is None:
+            raise ConfigurationError("Write adapter is not configured")
+
+        if not self.klass.writer.features['batch_write']:
+            raise ConfigurationError(
+                    "Write adapter does not support update_all")
 
     def _record_not_found_message(self, pk_array, results):
         err = "Couldn't find %s records for all primary key values in %s. "

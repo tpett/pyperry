@@ -44,7 +44,8 @@ class BaseMeta(type):
 
     _relation_delegates = (Relation.singular_query_methods +
                 Relation.plural_query_methods +
-                ['modifiers', 'all', 'first', 'find'])
+                ['modifiers', 'all', 'first', 'find', 'update_all',
+                'delete_all'])
 
     def __init__(cls, name, bases, class_dict):
         """Class has been created now setup additional needs"""
@@ -622,7 +623,7 @@ class Base(object):
                 self.callback_manager.trigger(callbacks.before_update, self)
 
         # Run the save
-        self.last_writer_response = self.writer(model=self, mode='write')
+        self.writer.last_response = self.writer(model=self, mode='write')
 
         # After callbacks
         if run_callbacks:
@@ -633,7 +634,7 @@ class Base(object):
 
             self.callback_manager.trigger(callbacks.after_save, self)
 
-        return self.last_writer_response.success
+        return self.writer.last_response.success
 
     def update(self, **kwargs):
         """
@@ -727,12 +728,12 @@ class Base(object):
         if run_callbacks:
             self.callback_manager.trigger(callbacks.before_destroy, self)
 
-        self.last_writer_response = self.writer(model=self, mode='delete')
+        self.writer.last_response = self.writer(model=self, mode='delete')
 
         if run_callbacks:
             self.callback_manager.trigger(callbacks.after_destroy, self)
 
-        return self.last_writer_response.success
+        return self.writer.last_response.success
 
     #}
 

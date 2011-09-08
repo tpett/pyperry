@@ -114,6 +114,10 @@ class AbstractAdapter(object):
 
         self.config = DelayedConfig(config)
         self._stack = None
+        #
+        # Specifies optional features that are implemented by this adapter
+        self.features = {
+                'batch_write': False }
 
         if 'timeout' in self.config.keys():
             socket.setdefaulttimeout(self.config['timeout'])
