@@ -386,6 +386,7 @@ class Base(object):
     """
 
     __metaclass__ = BaseMeta
+    _relation_class = Relation
 
     def __init__(self, fields=None, new_record=True, **kwargs):
         """
@@ -806,7 +807,7 @@ class Base(object):
 
         """
         if not hasattr(cls, '_relation') or cls._relation.klass != cls:
-            cls._relation = Relation(cls)
+            cls._relation = cls._relation_class(cls)
         return cls._relation
 
     @classmethod

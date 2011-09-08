@@ -879,6 +879,18 @@ class BaseReloadMethodTestCase(BasePersistenceTestCase):
         test.reload()
         self.assertEqual(test.last_relation.query()['fresh'], True)
 
+class RelationOverrideTestCase(BaseTestCase):
+
+    def test_uses_config_option(self):
+        class MyRelation(pyperry.relation.Relation): pass
+        class Test(pyperry.Base):
+            _relation_class = MyRelation
+
+        self.assertEqual(Test.relation().__class__, MyRelation)
+        self.assertEqual(
+                pyperry.base.Base.relation().__class__,
+                pyperry.relation.Relation)
+
 
 ##
 # Freezing objects
