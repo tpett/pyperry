@@ -232,6 +232,16 @@ class BelongsToTestCase(BaseAssociationTestCase):
         self.assertEqual(comment.parent_id, 1)
         self.assertEqual(comment.parent_type, 'Article')
 
+    def test_set_descriptor_none(self):
+        """should set fk to None when descriptor called with None"""
+        comment = self.comment(parent_id=1, parent_type="Article")
+        self.assertEqual(comment.parent_id, 1)
+        self.assertEqual(comment.parent_type, "Article")
+        comment.parent = None
+        self.assertEqual(comment.parent_id, None)
+        self.assertEqual(comment.parent_type, None)
+
+
 class HasTestCase(BaseAssociationTestCase):
 
     def setUp(self):

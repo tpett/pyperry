@@ -664,9 +664,9 @@ class Base(object):
         @return: Returns C{True} on success or C{False} on failure
 
         """
-        if self.new_record:
+        if not self.new_record:
             raise errors.PersistenceError(
-                    "update() must only be called on a new record but "
+                    "create() must only be called on a new record but "
                     "new_record attribute is False" )
 
         return self.save(**kwargs)
