@@ -237,10 +237,19 @@ class BelongsTo(Association):
     def __set__(self, instance, value):
         super(BelongsTo, self).__set__(instance, value)
 
-        setattr(instance, self.get_foreign_key(), value.pk_value())
+        if value is None:
+            pk = None
+        else:
+            pk = value.pk_value()
+
+        setattr(instance, self.get_foreign_key(), pk)
 
         if self.polymorphic:
-            setattr(instance, self.polymorphic_type(), value.__class__.__name__)
+            if value is None:
+                type_name = None
+            else:
+                type_name = value.__class__.__name__
+            setattr(instance, self.polymorphic_type(), type_name)
 
     def type(self):
         return 'belongs_to'

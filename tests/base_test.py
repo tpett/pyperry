@@ -647,15 +647,17 @@ class BaseCreateMethodTestCase(BasePersistenceTestCase):
         """should be an instance method"""
         self.assertEqual(self.Test.create.im_class, self.Test)
 
-    def test_raises_on_new_record(self):
+    def test_raises_on_not_new_record(self):
         """should raise PersistenceError when called on new_record"""
+        self.test.new_record = False
         self.assertRaises(errors.PersistenceError, self.test.create)
 
     def test_calls_save(self):
         """should call save() when all is well and return"""
         TestAdapter.data = { 'id': 1 }
         TestAdapter.return_val = Response(success=True)
-        self.test.new_record = False
+        TestAdapter.return_val._parsed = TestAdapter.data
+        self.test.new_record = True
         val = self.test.create()
         # One for the save, one for the reload
         self.assertEqual(len(TestAdapter.calls), 2)
