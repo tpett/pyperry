@@ -487,7 +487,7 @@ class Relation(object):
         setattr(self.__class__, key, method)
 
     def clone(self):
-        return Relation(self)
+        return self.__class__(self)
 
     def reset(self):
         self._records = None

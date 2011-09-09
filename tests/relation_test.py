@@ -100,6 +100,12 @@ class CloneTestCase(BaseRelationTestCase):
         rel = self.relation.where(id=re.compile('foo'))
         rel.clone()
 
+    def test_clones_on_selfs_class(self):
+        class MyRelation(Relation): pass
+        rel = MyRelation(self.Test)
+        rel_clone = rel.clone()
+        self.assertTrue(isinstance(rel_clone, MyRelation))
+
 
 
 ##
