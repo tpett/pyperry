@@ -241,6 +241,10 @@ class BelongsToTestCase(BaseAssociationTestCase):
         self.assertEqual(comment.parent_id, None)
         self.assertEqual(comment.parent_type, None)
 
+    def test_getter_returns_none_on_none_scope(self):
+        comment = self.comment()
+        self.assertEqual(comment.parent, None)
+
 
 class HasTestCase(BaseAssociationTestCase):
 

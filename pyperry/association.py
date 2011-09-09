@@ -96,11 +96,9 @@ class Association(object):
         elif hasattr(instance, self.cache_id):
             return getattr(instance, self.cache_id)
         else:
-            val = None
-            if(self.collection()):
-                val = self.scope(instance)
-            else:
-                val = self.scope(instance).first()
+            val = self.scope(instance)
+            if not self.collection() and val is not None:
+                val = val.first()
             setattr(instance, self.cache_id, val)
             return val
 
