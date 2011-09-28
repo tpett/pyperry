@@ -1,4 +1,5 @@
 from pyperry.errors import ConfigurationError
+from pyperry import caching
 
 class ModelBridge(object):
     """
@@ -53,6 +54,7 @@ class ModelBridge(object):
 
     def handle_write(self, response, **kwargs):
         """Updates a model after a save."""
+        caching.reset()
         if 'model' in kwargs:
             model = kwargs['model']
             if response.success:
@@ -87,6 +89,7 @@ class ModelBridge(object):
 
     def handle_delete(self, response, **kwargs):
         """Updates the model instance after a delete"""
+        caching.reset()
         if 'model' in kwargs:
             model = kwargs['model']
             if response.success:

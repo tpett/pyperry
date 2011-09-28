@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import hashlib
 
 from pyperry.relation import Relation
+from pyperry import caching
 
 class CacheStore(object):
 
@@ -72,7 +73,7 @@ class LocalCache(object):
 
         result = self.cache_store.read(key)
 
-        if not result or rel.params['fresh']:
+        if (not result or rel.params['fresh']) and caching.enabled:
             # Call the next item in the stack to get a fresh result
             result = self.next(**kwargs)
         else:
@@ -93,6 +94,8 @@ class LocalCache(object):
         return result
 
 cache_store = LocalCache.cache_store
+
+caching.register(cache_store.empty)
 
 ##
 # Add features to Relation needed for caching

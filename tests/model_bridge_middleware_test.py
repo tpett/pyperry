@@ -4,6 +4,7 @@ import unittest
 import pyperry
 from pyperry.middlewares import ModelBridge
 from pyperry.field import Field
+from pyperry import caching
 from tests.fixtures.test_adapter import TestAdapter
 from tests.fixtures.test_adapter import SuccessAdapter
 from tests.fixtures.test_adapter import FailureAdapter
@@ -97,6 +98,15 @@ class ModelBridgeWriteTestCase(ModelBridgeBaseTestCase):
             self.model.reader.reset_calls()
         except:
             pass
+
+    def test_resets_caching(self):
+        self.called_foo = False
+        def foo():
+            self.called_foo = True
+
+        caching.register(foo)
+        ModelBridge(SuccessAdapter())(**self.options)
+        self.assertEqual(self.called_foo, True)
 
 
 class WriteExistingRecordsTestCase(ModelBridgeWriteTestCase):

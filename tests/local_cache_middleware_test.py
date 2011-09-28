@@ -7,6 +7,7 @@ from pyperry.middlewares import LocalCache
 from tests.fixtures.test_adapter import TestAdapter
 from pyperry.middlewares.local_cache import CacheStore
 from pyperry.field import Field
+from pyperry import caching
 
 class LocalCacheBaseTestCase(unittest.TestCase):
     pass
@@ -180,4 +181,13 @@ class CacheStoreEmptyMethodTestCase(CacheStoreBaseTestCase):
         self.store.write('baz', 'blah', datetime.now() + timedelta(hours=5))
         self.store.empty()
         self.assertEqual(len(self.store.store.keys()), 0)
+
+
+class LocalCacheRegistersToCaching(unittest.TestCase):
+
+    def test_caching(self):
+        self.assertTrue(
+                pyperry.middlewares.local_cache.cache_store.empty
+                in
+                caching.registry)
 
