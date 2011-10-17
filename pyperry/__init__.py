@@ -70,5 +70,6 @@ from pyperry.association import Association
 import logging
 
 # Override this with a custom logger
-logger = logging
+logger = logging.getLogger('pyperry')
+logger.setLevel(logging.CRITICAL)
 
