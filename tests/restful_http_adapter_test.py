@@ -270,6 +270,11 @@ class PersistenceTestCase(HttpAdapterTestCase):
         error_kwargs.update(kwargs)
         http_server.set_response(**error_kwargs)
 
+    def assert_success_with_status(self, status, success):
+        http_server.set_response(status=status)
+        response = self.adapter_method(model=self.model)
+        self.assertEqual(response.success, success)
+
     def test_success_response(self):
         """should return an initialized Response object indicating success"""
         if type(self) is PersistenceTestCase: return
@@ -282,6 +287,16 @@ class PersistenceTestCase(HttpAdapterTestCase):
         self.assertEqual(response.raw_format, 'xml')
         self.assertTrue('foo' in response.meta)
         self.assertEqual(response.meta['foo'], 'bar')
+
+    def test_success_condition(self):
+        if type(self) is PersistenceTestCase: return
+        self.assert_success_with_status(200, True)
+        self.assert_success_with_status(201, True)
+        self.assert_success_with_status(251, True)
+        self.assert_success_with_status(300, True)
+        self.assert_success_with_status(350, True)
+        self.assert_success_with_status(400, False)
+        self.assert_success_with_status(500, False)
 
     def test_fail_response(self):
         """should return an initialized Response object indicating failure"""

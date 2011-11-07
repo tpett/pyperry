@@ -99,7 +99,7 @@ class RestfulHttpAdapter(AbstractAdapter):
     def response(self, http_response, response_body):
         r = Response()
         r.status = http_response.status
-        r.success = r.status == 200
+        r.success = r.status >= 200 and r.status < 400
         r.raw = response_body
         r.raw_format = self.config_value('format', 'json')
         r.meta = dict(http_response.getheaders())
