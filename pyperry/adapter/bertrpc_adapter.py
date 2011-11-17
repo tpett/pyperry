@@ -81,7 +81,5 @@ class BERTRPC(AbstractAdapter):
 
     @property
     def service(self):
-        if not hasattr(self, '_service'):
-            self._service = Service(self.config['server'], self.config['port'])
-        return self._service
+        return Service(self.config['server'], self.config['port'])
 
