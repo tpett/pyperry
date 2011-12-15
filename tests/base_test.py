@@ -132,6 +132,42 @@ class ClassSetupTestCase(BaseTestCase):
         self.assertTrue(Parent.callback_manager is not
                 Child.callback_manager)
 
+    def test_subclass_inherits_fields(self):
+        class Parent(pyperry.Base):
+            name = Field()
+        class Parent2(pyperry.Base):
+            name2 = Field()
+        class Child(Parent, Parent2):
+            pass
+
+        self.assertTrue("name" in Child.defined_fields)
+        self.assertTrue("name2" in Child.defined_fields)
+
+    def test_subclass_inherits_associations(self):
+        class Parent(pyperry.Base):
+            foo = pyperry.association.HasMany()
+        class Parent2(pyperry.Base):
+            bar = pyperry.association.BelongsTo()
+        class Child(Parent, Parent2):
+            pass
+
+        self.assertTrue("foo" in Child.defined_associations)
+        self.assertTrue("bar" in Child.defined_associations)
+
+    def test_subclass_inherits_callback_manager(self):
+        class Parent(pyperry.Base):
+            foo = pyperry.callbacks.after_save(lambda: 1)
+        class Parent2(pyperry.Base):
+            bar = pyperry.callbacks.before_save(lambda: 1)
+        class Child(Parent, Parent2):
+            pass
+
+        print Child.callback_manager.callbacks
+        self.assertTrue(pyperry.callbacks.after_save
+                in Child.callback_manager.callbacks)
+        self.assertTrue(pyperry.callbacks.before_save
+                in Child.callback_manager.callbacks)
+
 ##
 # Test the initializer
 #

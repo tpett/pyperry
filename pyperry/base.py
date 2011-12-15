@@ -58,18 +58,22 @@ class BaseMeta(type):
             cls.defined_fields = set()
         else:
             cls.defined_fields = copy(cls.defined_fields)
+            for base in bases:
+                cls.defined_fields |= base.defined_fields
 
         # Define any associations set during class definition
         if not hasattr(cls, 'defined_associations'):
             cls.defined_associations = {}
         else:
             cls.defined_associations = deepcopy(cls.defined_associations)
+            for base in bases:
+                cls.defined_associations.update(base.defined_associations)
 
         if not hasattr(cls, 'callback_manager'):
             cls.callback_manager = callbacks.CallbackManager()
         else:
             cls.callback_manager = callbacks.CallbackManager(
-                    cls.callback_manager )
+                    [ base.callback_manager for base in bases ] )
 
         # Force calling of __setattr__ for each defined attribute for special
         # attribute handling

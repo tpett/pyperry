@@ -20,17 +20,21 @@ class CallbackManagerInitTestCase(CallbackManagerTestCase):
         self.assertTrue(hasattr(m, 'callbacks'))
         self.assertEqual(m.callbacks, {})
 
-    def test_constructs_from_instance(self):
+    def test_constructs_from_instance_list(self):
         """should construct copy when instance passed"""
-        m = CallbackManager()
-        m.callbacks['foo'] = 'bar'
-        m2 = CallbackManager(m)
+        m1 = CallbackManager()
+        m1.callbacks['foo'] = 'bar'
+        m2 = CallbackManager()
+        m2.callbacks['bar'] = 'baz'
+        m3 = CallbackManager([m1, m2])
 
-        self.assertEqual(m.callbacks, m2.callbacks)
+        result = m1.callbacks
+        result.update(m2.callbacks)
+        self.assertEqual(result, m3.callbacks)
 
-        m.callbacks['foo'] = 'baz'
+        m1.callbacks['foo'] = 'baz'
 
-        self.assertEqual(m2.callbacks['foo'], 'bar')
+        self.assertEqual(m3.callbacks['foo'], 'bar')
 
     def test_requires_callback_manager_type(self):
         """should error on bad instance param"""

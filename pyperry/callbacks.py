@@ -12,18 +12,20 @@ class CallbackManager(object):
 
     """
 
-    def __init__(self, instance=None):
+    def __init__(self, instances=[]):
         """
         Constructor
 
-        Takes an optional instance of %L{CallbackManager} to be copied.
+        Takes an optional list of %L{CallbackManager} instances to be copied.
 
         @param instance: instance of %L{CallbackManager}
 
         """
         self.callbacks = {}
+        if not isinstance(instances, list):
+            raise ConfigurationError("CallbackManager type expected.")
 
-        if instance is not None:
+        for instance in instances:
             if isinstance(instance, CallbackManager):
                 self.callbacks.update(instance.callbacks)
             else:
