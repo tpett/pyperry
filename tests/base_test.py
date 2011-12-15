@@ -137,7 +137,8 @@ class ClassSetupTestCase(BaseTestCase):
             name = Field()
         class Parent2(pyperry.Base):
             name2 = Field()
-        class Child(Parent, Parent2):
+        class Parent3(object): pass
+        class Child(Parent, Parent2, Parent3):
             pass
 
         self.assertTrue("name" in Child.defined_fields)
@@ -148,7 +149,8 @@ class ClassSetupTestCase(BaseTestCase):
             foo = pyperry.association.HasMany()
         class Parent2(pyperry.Base):
             bar = pyperry.association.BelongsTo()
-        class Child(Parent, Parent2):
+        class Parent3(object): pass
+        class Child(Parent, Parent2, Parent3):
             pass
 
         self.assertTrue("foo" in Child.defined_associations)
@@ -159,7 +161,8 @@ class ClassSetupTestCase(BaseTestCase):
             foo = pyperry.callbacks.after_save(lambda: 1)
         class Parent2(pyperry.Base):
             bar = pyperry.callbacks.before_save(lambda: 1)
-        class Child(Parent, Parent2):
+        class Parent3(object): pass
+        class Child(Parent, Parent2, Parent3):
             pass
 
         print Child.callback_manager.callbacks
