@@ -56,6 +56,18 @@ class CallbackManager(object):
             for cb in self.callbacks[callback_type]:
                 cb(*args)
 
+class CallbackPassThrough(object):
+    """
+    Vehicle for calling callbacks directly through attribute access
+    """
+
+    def __init__(self, instance, callback):
+        self.instance = instance
+        self.callback = callback
+
+    def __call__(self, *args, **kwargs):
+        self.callback(self.instance, *args, **kwargs)
+
 class Callback(object):
     """
     Base abstract class for all callbacks.
@@ -78,8 +90,11 @@ class Callback(object):
             raise ConfigurationError(
                     "Callback must be initialized with a callable." )
 
-    def __call__(self, instance):
-        return self.callback(instance)
+    def __get__(self, instance, owner):
+        return CallbackPassThrough(instance, self)
+
+    def __call__(self, *args, **kwargs):
+        return self.callback(*args, **kwargs)
 
 ##
 # Explicitly define each of the possible callbacks:

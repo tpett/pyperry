@@ -118,12 +118,14 @@ class ClassSetupTestCase(BaseTestCase):
         self.assertTrue(isinstance(Test.callback_manager,
             callbacks.CallbackManager ))
 
+        self.assertTrue(isinstance(Test.foo,
+            pyperry.callbacks.CallbackPassThrough))
         self.assertEqual(
                 Test.callback_manager.callbacks[callbacks.before_save],
-                [Test.foo] )
+                [Test.foo.callback] )
         self.assertEqual(
                 Test.callback_manager.callbacks[callbacks.before_update],
-                [Test.bar] )
+                [Test.bar.callback] )
 
     def test_callback_manager_copied(self):
         class Parent(pyperry.Base): pass
@@ -131,6 +133,17 @@ class ClassSetupTestCase(BaseTestCase):
 
         self.assertTrue(Parent.callback_manager is not
                 Child.callback_manager)
+
+    def test_callbacks_callable(self):
+        class Test(pyperry.Base):
+            @callbacks.before_save
+            def bar(self): pass
+            @callbacks.before_save
+            def foo(self, test=None): pass
+
+        t = Test()
+        t.bar()
+        t.foo(test=True)
 
     def test_subclass_inherits_fields(self):
         class Parent(pyperry.Base):

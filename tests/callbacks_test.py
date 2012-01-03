@@ -105,14 +105,16 @@ class CallbackCallMethodTestCase(CallbacksTestCase):
 
     def test_calls_callable(self):
         """should call the callable and return result"""
-        call = Callback(lambda(self): 'foo')
+        call = Callback(lambda(var): 'foo')
         self.assertTrue(callable(call))
         self.assertEqual(call('bar'), 'foo')
 
     def test_passes_arg_through(self):
         """should pass arg on through"""
-        call = Callback(lambda(self): self)
-        self.assertEqual(call('foo'), 'foo')
+        def test(self, foo, bar=None):
+            return [self, foo, bar]
+        call = Callback(test)
+        self.assertEqual(call('foo', 'foo', bar=True), ['foo', 'foo', True])
 
 class CallbackChildTest(CallbacksTestCase):
     """
