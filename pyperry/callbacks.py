@@ -27,7 +27,10 @@ class CallbackManager(object):
 
         for instance in instances:
             if isinstance(instance, CallbackManager):
-                self.callbacks.update(instance.callbacks)
+                for callback_type, callbacks in instance.callbacks.iteritems():
+                    if not callback_type in self.callbacks:
+                        self.callbacks[callback_type] = list()
+                    self.callbacks[callback_type] += callbacks
             else:
                 raise ConfigurationError("CallbackManager type expected.")
 
