@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version='1.2.9'
+version='1.2.10'
 
 setup(
     name='pyperry',
