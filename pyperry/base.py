@@ -85,7 +85,7 @@ class BaseMeta(type):
             cls.callback_manager = callbacks.CallbackManager()
         else:
             cls.callback_manager = callbacks.CallbackManager(
-                    [ base.callback_manager for base in bases 
+                    [ base.callback_manager for base in bases
                         if hasattr(base, 'callback_manager') ] )
 
         # Force calling of __setattr__ for each defined attribute for special
@@ -605,7 +605,8 @@ class Base(object):
         fields.update(kwargs)
 
         for field in fields:
-            if field in self.defined_fields:
+            if (field in self.defined_fields
+                    or field in self.defined_field_mappings):
                 self[field] = fields[field]
 
 
