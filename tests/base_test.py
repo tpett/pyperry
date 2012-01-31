@@ -38,6 +38,14 @@ class ClassSetupTestCase(BaseTestCase):
         self.assertEqual(Test.defined_fields, set(['id', 'name', 'poop',
                 'foo']))
 
+        test = Test(id=1, name="name", poop=2, bar="lala")
+        print Test.defined_field_mappings
+        print test.fields
+        self.assertEqual(test.id, 1)
+        self.assertEqual(test.name, "name")
+        self.assertEqual(test.poop, 2)
+        self.assertEqual(test.foo, "lala")
+
     def test_sets_target_and_id_on_associations(self):
         """should set target_klass and id on instances of Association"""
         class Test(pyperry.Base):

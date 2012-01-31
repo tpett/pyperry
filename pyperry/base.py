@@ -62,6 +62,16 @@ class BaseMeta(type):
                 if hasattr(base, 'defined_fields'):
                     cls.defined_fields |= base.defined_fields
 
+        # Define a mapping of raw field names to actual defined fields
+        if not hasattr(cls, 'defined_field_mappings'):
+            cls.defined_field_mappings = {}
+        else:
+            cls.defined_field_mappings = copy(cls.defined_field_mappings)
+            for base in bases:
+                if hasattr(base, 'defined_field_mappings'):
+                    cls.defined_field_mappings.update(
+                            base.defined_field_mappings)
+
         # Define any associations set during class definition
         if not hasattr(cls, 'defined_associations'):
             cls.defined_associations = {}
@@ -121,6 +131,8 @@ class BaseMeta(type):
         if isinstance(value, Field):
             if value.name is None:
                 value.name = key
+            else:
+                cls.defined_field_mappings[value.name] = key
             cls._define_fields(key)
         elif isinstance(value, Association):
             value.id = key
@@ -448,7 +460,7 @@ class Base(object):
         @param key: name of the field to get
 
         """
-        if key in self.defined_fields:
+        if key in self.defined_fields or key in self.defined_field_mappings:
             # Using get() here to avoid KeyError on uninitialized attrs
             return self.fields.get(key)
         else:
@@ -469,7 +481,7 @@ class Base(object):
         @param value: value to set C{key} field to
 
         """
-        if key in self.defined_fields:
+        if key in self.defined_fields or key in self.defined_field_mappings:
             self.fields[key] = value
         else:
             raise KeyError("Undefined field '%s'" % key)
@@ -527,9 +539,10 @@ class Base(object):
         """
         defaults = {}
         for field_name in self.defined_fields:
-            field = getattr(self.__class__, field_name)
-            if field.default is not None:
-                defaults[field_name] = field.default
+            if hasattr(self.__class__, field_name):
+                field = getattr(self.__class__, field_name)
+                if field.default is not None:
+                    defaults[field_name] = field.default
         return defaults
 
 
@@ -537,7 +550,7 @@ class Base(object):
         """
         Set the fields of the object using the provided dictionary.
 
-        Only fields listed in _defined_fields will be set.  This method will
+        Only fields listed in defined_fields will be set.  This method will
         route all setting through the Field construct, and is equivalent to
         setting each key to the equivalent attribute on the class::
 
@@ -563,6 +576,9 @@ class Base(object):
             if (field in self.defined_fields
                     or field in self.defined_associations):
                 setattr(self, field, fields[field])
+            elif (field in self.defined_field_mappings):
+                setattr(self, self.defined_field_mappings[field],
+                        fields[field])
 
     def set_raw_fields(self, fields=None, **kwargs):
         """
